@@ -1,0 +1,42 @@
+[
+  {
+    "id": "renameColumn.user.passwordHash.password",
+    "label": "Rename column \"passwordHash\" to \"password\" on \"user\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "password",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"passwordHash\" exists",
+        "sql": "SELECT EXISTS (\n     SELECT 1\n     FROM information_schema.columns\n     WHERE table_schema = 'public'\n       AND table_name = 'user'\n       AND column_name = 'passwordHash'\n   ) AS result"
+      },
+      {
+        "description": "ensure column \"password\" does not exist",
+        "sql": "SELECT NOT EXISTS (\n     SELECT 1\n     FROM information_schema.columns\n     WHERE table_schema = 'public'\n       AND table_name = 'user'\n       AND column_name = 'password'\n   ) AS result"
+      }
+    ],
+    "execute": [
+      {
+        "description": "rename column \"passwordHash\" to \"password\"",
+        "sql": "ALTER TABLE \"public\".\"user\" RENAME COLUMN \"passwordHash\" TO \"password\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"password\" exists",
+        "sql": "SELECT EXISTS (\n     SELECT 1\n     FROM information_schema.columns\n     WHERE table_schema = 'public'\n       AND table_name = 'user'\n       AND column_name = 'password'\n   ) AS result"
+      },
+      {
+        "description": "verify column \"passwordHash\" does not exist",
+        "sql": "SELECT NOT EXISTS (\n     SELECT 1\n     FROM information_schema.columns\n     WHERE table_schema = 'public'\n       AND table_name = 'user'\n       AND column_name = 'passwordHash'\n   ) AS result"
+      }
+    ]
+  }
+]

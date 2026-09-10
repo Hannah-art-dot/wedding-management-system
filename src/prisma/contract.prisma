@@ -1,0 +1,205 @@
+// Wedding Guest & Dinner Management — data contract (Prisma Next)
+// Dinner covers = sum of CONFIRMED Guest + Spouse + FamilyMember (active only).
+// Ticket.ticketNumber is the single source of truth for invitation codes.
+// Soft delete via deletedAt; never hard-delete on event day.
+
+enum user_role {
+  @@type("pg/text@1")
+  ADMIN         = "ADMIN"
+  MANAGER       = "MANAGER"
+  CHECKIN_STAFF = "CHECKIN_STAFF"
+  VIEWER        = "VIEWER"
+}
+
+enum user_status {
+  @@type("pg/text@1")
+  ACTIVE   = "ACTIVE"
+  DISABLED = "DISABLED"
+  DELETED  = "DELETED"
+}
+
+enum side {
+  @@type("pg/text@1")
+  BRIDE   = "BRIDE"
+  GROOM   = "GROOM"
+  NEUTRAL = "NEUTRAL"
+}
+
+enum gender {
+  @@type("pg/text@1")
+  MALE        = "MALE"
+  FEMALE      = "FEMALE"
+  OTHER       = "OTHER"
+  UNSPECIFIED = "UNSPECIFIED"
+}
+
+enum rsvp_status {
+  @@type("pg/text@1")
+  PENDING   = "PENDING"
+  CONFIRMED = "CONFIRMED"
+  DECLINED  = "DECLINED"
+  MAYBE     = "MAYBE"
+}
+
+enum attendance_status {
+  @@type("pg/text@1")
+  NOT_ARRIVED = "NOT_ARRIVED"
+  ARRIVED     = "ARRIVED"
+  NO_SHOW     = "NO_SHOW"
+}
+
+enum ticket_status {
+  @@type("pg/text@1")
+  NOT_ISSUED = "NOT_ISSUED"
+  ISSUED     = "ISSUED"
+  PARTIAL    = "PARTIAL"
+  USED       = "USED"
+  LOST       = "LOST"
+  CANCELLED  = "CANCELLED"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  username     String      @unique
+  password     String
+  role         user_role   @default(VIEWER)
+  status       user_status @default(ACTIVE)
+  auditLogs    AuditLog[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @default(now())
+
+  @@index([status])
+}
+
+model Family {
+  id            String         @id @default(uuid())
+  familyName    String
+  side          side           @default(NEUTRAL)
+  contactPerson String?
+  phone         String?
+  notes         String?
+  deletedAt     DateTime?
+  guests        Guest[]
+  familyMembers FamilyMember[]
+  tickets       Ticket[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now())
+
+  @@index([familyName])
+  @@index([side])
+  @@index([deletedAt])
+}
+
+model Guest {
+  id               String             @id @default(uuid())
+  familyId         String?
+  family           Family?            @relation(fields: [familyId], references: [id])
+  fullName         String
+  gender           gender?
+  phone            String?
+  email            String?
+  // Extensible category (Bride's Family, Groom's Friends, Other, custom…).
+  category         String?
+  side             side               @default(NEUTRAL)
+  rsvpStatus       rsvp_status        @default(PENDING)
+  rsvpReceivedAt   DateTime?
+  attendanceStatus attendance_status  @default(NOT_ARRIVED)
+  checkedInAt      DateTime?
+  checkedInByUserId String?
+  specialNotes     String?
+  deletedAt        DateTime?
+  spouse           Spouse?
+  ticket           Ticket?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now())
+
+  @@index([familyId])
+  @@index([fullName])
+  @@index([phone])
+  @@index([side])
+  @@index([category])
+  @@index([rsvpStatus])
+  @@index([attendanceStatus])
+  @@index([deletedAt])
+}
+
+model Spouse {
+  id               String            @id @default(uuid())
+  guestId          String            @unique
+  guest            Guest             @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  name             String
+  gender           gender?
+  rsvpStatus       rsvp_status       @default(PENDING)
+  rsvpReceivedAt   DateTime?
+  attendanceStatus attendance_status @default(NOT_ARRIVED)
+  checkedInAt      DateTime?
+  checkedInByUserId String?
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now())
+
+  @@index([deletedAt])
+}
+
+model FamilyMember {
+  id               String            @id @default(uuid())
+  familyId         String
+  family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  name             String
+  relationship     String
+  age              Int?
+  rsvpStatus       rsvp_status       @default(PENDING)
+  rsvpReceivedAt   DateTime?
+  attendanceStatus attendance_status @default(NOT_ARRIVED)
+  checkedInAt      DateTime?
+  checkedInByUserId String?
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now())
+
+  @@index([familyId])
+  @@index([rsvpStatus])
+  @@index([deletedAt])
+}
+
+model Ticket {
+  id            String        @id @default(uuid())
+  ticketNumber  String        @unique
+  familyId      String?
+  family        Family?       @relation(fields: [familyId], references: [id])
+  guestId       String?       @unique
+  guest         Guest?        @relation(fields: [guestId], references: [id])
+  numberAllowed Int           @default(1)
+  numberUsed    Int           @default(0)
+  status        ticket_status @default(NOT_ISSUED)
+  issueDate     DateTime?
+  usedDate      DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+
+  @@index([ticketNumber])
+  @@index([status])
+  @@index([familyId])
+  @@index([deletedAt])
+  // Exactly one owner: family XOR guest (column names match storage / camelCase).
+  @@check(expression: "(\"familyId\" IS NOT NULL AND \"guestId\" IS NULL) OR (\"familyId\" IS NULL AND \"guestId\" IS NOT NULL)", name: "ticket_owner_xor")
+  @@check(expression: "\"numberAllowed\" >= 1", name: "ticket_number_allowed_positive")
+  @@check(expression: "\"numberUsed\" >= 0 AND \"numberUsed\" <= \"numberAllowed\"", name: "ticket_number_used_range")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  recordType String
+  recordId   String?
+  metadata   String?
+  timestamp  DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([recordType, recordId])
+  @@index([userId])
+}

@@ -1,0 +1,2764 @@
+[
+  {
+    "id": "dropColumn.guest.ticketNumber",
+    "label": "Drop column \"ticketNumber\" from \"guest\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "ticketNumber",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"ticketNumber\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "ticketNumber"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop column \"ticketNumber\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" DROP COLUMN \"ticketNumber\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"ticketNumber\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "ticketNumber"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.auditLog",
+    "label": "Create table \"auditLog\"",
+    "summary": "Creates table \"auditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "auditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"auditLog\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"auditLog\"",
+        "sql": "CREATE TABLE \"public\".\"auditLog\" (\n  \"action\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"metadata\" text,\n  \"recordId\" text,\n  \"recordType\" text NOT NULL,\n  \"timestamp\" timestamptz DEFAULT (now()) NOT NULL,\n  \"userId\" text,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"auditLog\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.family",
+    "label": "Create table \"family\"",
+    "summary": "Creates table \"family\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "family"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"family\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"family\"",
+        "sql": "CREATE TABLE \"public\".\"family\" (\n  \"contactPerson\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"familyName\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"notes\" text,\n  \"phone\" text,\n  \"side\" text DEFAULT 'NEUTRAL' NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"family_side_check_625a2b64\" CHECK (\"side\" IN ('BRIDE', 'GROOM', 'NEUTRAL'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"family\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.familyMember",
+    "label": "Create table \"familyMember\"",
+    "summary": "Creates table \"familyMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "familyMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"familyMember\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"familyMember\"",
+        "sql": "CREATE TABLE \"public\".\"familyMember\" (\n  \"age\" int4,\n  \"attendanceStatus\" text DEFAULT 'NOT_ARRIVED' NOT NULL,\n  \"checkedInAt\" timestamptz,\n  \"checkedInByUserId\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"familyId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"relationship\" text NOT NULL,\n  \"rsvpReceivedAt\" timestamptz,\n  \"rsvpStatus\" text DEFAULT 'PENDING' NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"familyMember_attendanceStatus_check_bb131219\" CHECK (\"attendanceStatus\" IN ('NOT_ARRIVED', 'ARRIVED', 'NO_SHOW')),\n  CONSTRAINT \"familyMember_rsvpStatus_check_b3adaca7\" CHECK (\"rsvpStatus\" IN ('PENDING', 'CONFIRMED', 'DECLINED', 'MAYBE'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"familyMember\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.spouse",
+    "label": "Create table \"spouse\"",
+    "summary": "Creates table \"spouse\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"spouse\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"spouse\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"spouse\"",
+        "sql": "CREATE TABLE \"public\".\"spouse\" (\n  \"attendanceStatus\" text DEFAULT 'NOT_ARRIVED' NOT NULL,\n  \"checkedInAt\" timestamptz,\n  \"checkedInByUserId\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"gender\" text,\n  \"guestId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"rsvpReceivedAt\" timestamptz,\n  \"rsvpStatus\" text DEFAULT 'PENDING' NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"spouse_attendanceStatus_check_bb131219\" CHECK (\"attendanceStatus\" IN ('NOT_ARRIVED', 'ARRIVED', 'NO_SHOW')),\n  CONSTRAINT \"spouse_gender_check_35ac3b49\" CHECK (\"gender\" IN ('MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED')),\n  CONSTRAINT \"spouse_rsvpStatus_check_b3adaca7\" CHECK (\"rsvpStatus\" IN ('PENDING', 'CONFIRMED', 'DECLINED', 'MAYBE'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"spouse\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"spouse\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.ticket",
+    "label": "Create table \"ticket\"",
+    "summary": "Creates table \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ticket\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ticket\"",
+        "sql": "CREATE TABLE \"public\".\"ticket\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"familyId\" text,\n  \"guestId\" text,\n  \"id\" text NOT NULL,\n  \"issueDate\" timestamptz,\n  \"numberAllowed\" int4 DEFAULT 1 NOT NULL,\n  \"numberUsed\" int4 DEFAULT 0 NOT NULL,\n  \"status\" text DEFAULT 'NOT_ISSUED' NOT NULL,\n  \"ticketNumber\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"usedDate\" timestamptz,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"ticket_number_allowed_positive_20b020ee\" CHECK (\"numberAllowed\" >= 1),\n  CONSTRAINT \"ticket_number_used_range_904fe635\" CHECK (\"numberUsed\" >= 0 AND \"numberUsed\" <= \"numberAllowed\"),\n  CONSTRAINT \"ticket_owner_xor_480c5419\" CHECK ((\"familyId\" IS NOT NULL AND \"guestId\" IS NULL) OR (\"familyId\" IS NULL AND \"guestId\" IS NOT NULL)),\n  CONSTRAINT \"ticket_status_check_e32863d7\" CHECK (\"status\" IN ('NOT_ISSUED', 'ISSUED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ticket\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.attendanceStatus",
+    "label": "Add column \"attendanceStatus\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "attendanceStatus",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"attendanceStatus\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "attendanceStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"attendanceStatus\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"attendanceStatus\" text DEFAULT 'NOT_ARRIVED' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"attendanceStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "attendanceStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.category",
+    "label": "Add column \"category\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "category",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"category\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "category"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"category\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"category\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"category\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "category"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.checkedInAt",
+    "label": "Add column \"checkedInAt\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "checkedInAt",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"checkedInAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "checkedInAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"checkedInAt\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"checkedInAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"checkedInAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "checkedInAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.checkedInByUserId",
+    "label": "Add column \"checkedInByUserId\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "checkedInByUserId",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"checkedInByUserId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "checkedInByUserId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"checkedInByUserId\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"checkedInByUserId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"checkedInByUserId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "checkedInByUserId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.deletedAt",
+    "label": "Add column \"deletedAt\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "deletedAt",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"deletedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "deletedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"deletedAt\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"deletedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"deletedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "deletedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.email",
+    "label": "Add column \"email\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "email",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"email\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "email"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"email\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"email\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"email\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "email"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.familyId",
+    "label": "Add column \"familyId\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "familyId",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"familyId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "familyId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"familyId\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"familyId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"familyId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "familyId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.gender",
+    "label": "Add column \"gender\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "gender",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"gender\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "gender"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"gender\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"gender\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"gender\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "gender"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.rsvpReceivedAt",
+    "label": "Add column \"rsvpReceivedAt\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "rsvpReceivedAt",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"rsvpReceivedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "rsvpReceivedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"rsvpReceivedAt\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"rsvpReceivedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"rsvpReceivedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "rsvpReceivedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.specialNotes",
+    "label": "Add column \"specialNotes\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "specialNotes",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"specialNotes\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "specialNotes"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"specialNotes\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"specialNotes\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"specialNotes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "specialNotes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.updatedAt",
+    "label": "Add column \"updatedAt\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "updatedAt",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"updatedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "updatedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"updatedAt\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"updatedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "updatedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.status",
+    "label": "Add column \"status\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "status",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"status\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"status\" text DEFAULT 'ACTIVE' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.updatedAt",
+    "label": "Add column \"updatedAt\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "updatedAt",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"updatedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "updatedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"updatedAt\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"updatedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "updatedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.name",
+    "label": "Add column \"name\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "name",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"name\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "name"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"name\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"name\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"name\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "name"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data_migration.backfill-user-name",
+    "label": "Data transform: backfill-user-name",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Check backfill-user-name has work to do",
+        "sql": "SELECT EXISTS (SELECT \"id\" AS \"id\" FROM \"public\".\"user\" WHERE \"name\" IS NULL LIMIT 1) AS ok",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "Run backfill-user-name",
+        "sql": "UPDATE \"public\".\"user\" SET \"name\" = $1 WHERE \"name\" IS NULL",
+        "params": [
+          ""
+        ]
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "Verify backfill-user-name resolved all violations",
+        "sql": "SELECT NOT EXISTS (SELECT \"id\" AS \"id\" FROM \"public\".\"user\" WHERE \"name\" IS NULL LIMIT 1) AS ok",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.user.name",
+    "label": "Set NOT NULL on \"user\".\"name\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "name",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"name\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "name"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"name\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"user\" WHERE \"name\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"name\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ALTER COLUMN \"name\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"name\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "name",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.passwordHash",
+    "label": "Add column \"passwordHash\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "passwordHash",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"passwordHash\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "passwordHash"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"passwordHash\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"passwordHash\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"passwordHash\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "passwordHash"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data_migration.backfill-user-passwordHash",
+    "label": "Data transform: backfill-user-passwordHash",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Check backfill-user-passwordHash has work to do",
+        "sql": "SELECT EXISTS (SELECT \"id\" AS \"id\" FROM \"public\".\"user\" WHERE \"passwordHash\" IS NULL LIMIT 1) AS ok",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "Run backfill-user-passwordHash",
+        "sql": "UPDATE \"public\".\"user\" SET \"passwordHash\" = $1 WHERE \"passwordHash\" IS NULL",
+        "params": [
+          ""
+        ]
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "Verify backfill-user-passwordHash resolved all violations",
+        "sql": "SELECT NOT EXISTS (SELECT \"id\" AS \"id\" FROM \"public\".\"user\" WHERE \"passwordHash\" IS NULL LIMIT 1) AS ok",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.user.passwordHash",
+    "label": "Set NOT NULL on \"user\".\"passwordHash\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "passwordHash",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"passwordHash\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "passwordHash"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"passwordHash\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"user\" WHERE \"passwordHash\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"passwordHash\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ALTER COLUMN \"passwordHash\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"passwordHash\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "passwordHash",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropColumn.user.password",
+    "label": "Drop column \"password\" from \"user\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "password",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"password\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "password"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop column \"password\"",
+        "sql": "ALTER TABLE \"public\".\"user\" DROP COLUMN \"password\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"password\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "password"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "setDefault.guest.rsvpStatus",
+    "label": "Set default on \"guest\".\"rsvpStatus\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "rsvpStatus",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"rsvpStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "rsvpStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "set default on \"rsvpStatus\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ALTER COLUMN \"rsvpStatus\" SET DEFAULT 'PENDING'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"rsvpStatus\" has a default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NOT NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "rsvpStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "setDefault.guest.side",
+    "label": "Set default on \"guest\".\"side\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "side",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"side\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "side"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "set default on \"side\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ALTER COLUMN \"side\" SET DEFAULT 'NEUTRAL'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"side\" has a default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NOT NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "side"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "setDefault.user.role",
+    "label": "Set default on \"user\".\"role\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "role",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"role\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "role"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "set default on \"role\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ALTER COLUMN \"role\" SET DEFAULT 'VIEWER'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"role\" has a default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NOT NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "role"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.guest.guest_attendanceStatus_check_bb131219",
+    "label": "Add check constraint \"guest_attendanceStatus_check_bb131219\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "guest_attendanceStatus_check_bb131219",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"guest_attendanceStatus_check_bb131219\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_attendanceStatus_check_bb131219",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"guest_attendanceStatus_check_bb131219\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD CONSTRAINT \"guest_attendanceStatus_check_bb131219\" CHECK (\"attendanceStatus\" IN ('NOT_ARRIVED', 'ARRIVED', 'NO_SHOW'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"guest_attendanceStatus_check_bb131219\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_attendanceStatus_check_bb131219",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.guest.guest_gender_check_35ac3b49",
+    "label": "Add check constraint \"guest_gender_check_35ac3b49\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "guest_gender_check_35ac3b49",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"guest_gender_check_35ac3b49\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_gender_check_35ac3b49",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"guest_gender_check_35ac3b49\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD CONSTRAINT \"guest_gender_check_35ac3b49\" CHECK (\"gender\" IN ('MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"guest_gender_check_35ac3b49\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_gender_check_35ac3b49",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.guest.guest_rsvpStatus_check_b3adaca7",
+    "label": "Add check constraint \"guest_rsvpStatus_check_b3adaca7\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "guest_rsvpStatus_check_b3adaca7",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"guest_rsvpStatus_check_b3adaca7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_rsvpStatus_check_b3adaca7",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"guest_rsvpStatus_check_b3adaca7\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD CONSTRAINT \"guest_rsvpStatus_check_b3adaca7\" CHECK (\"rsvpStatus\" IN ('PENDING', 'CONFIRMED', 'DECLINED', 'MAYBE'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"guest_rsvpStatus_check_b3adaca7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_rsvpStatus_check_b3adaca7",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.guest.guest_side_check_625a2b64",
+    "label": "Add check constraint \"guest_side_check_625a2b64\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "guest_side_check_625a2b64",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"guest_side_check_625a2b64\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_side_check_625a2b64",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"guest_side_check_625a2b64\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD CONSTRAINT \"guest_side_check_625a2b64\" CHECK (\"side\" IN ('BRIDE', 'GROOM', 'NEUTRAL'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"guest_side_check_625a2b64\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_side_check_625a2b64",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.spouse.spouse_guestId_key",
+    "label": "Add unique constraint on \"spouse\" (guestId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "spouse_guestId_key",
+        "table": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"spouse_guestId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_guestId_key",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"spouse_guestId_key\"",
+        "sql": "ALTER TABLE \"public\".\"spouse\" ADD CONSTRAINT \"spouse_guestId_key\" UNIQUE (\"guestId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"spouse_guestId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_guestId_key",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.ticket.ticket_ticketNumber_key",
+    "label": "Add unique constraint on \"ticket\" (ticketNumber)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "ticket_ticketNumber_key",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ticket_ticketNumber_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_ticketNumber_key",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"ticket_ticketNumber_key\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\" ADD CONSTRAINT \"ticket_ticketNumber_key\" UNIQUE (\"ticketNumber\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ticket_ticketNumber_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_ticketNumber_key",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.ticket.ticket_guestId_key",
+    "label": "Add unique constraint on \"ticket\" (guestId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "ticket_guestId_key",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ticket_guestId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_guestId_key",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"ticket_guestId_key\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\" ADD CONSTRAINT \"ticket_guestId_key\" UNIQUE (\"guestId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ticket_guestId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_guestId_key",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.user.user_role_check_67a4ae3c",
+    "label": "Add check constraint \"user_role_check_67a4ae3c\" on \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "user_role_check_67a4ae3c",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_role_check_67a4ae3c\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_role_check_67a4ae3c",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"user_role_check_67a4ae3c\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_role_check_67a4ae3c\" CHECK (\"role\" IN ('ADMIN', 'MANAGER', 'CHECKIN_STAFF', 'VIEWER'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_role_check_67a4ae3c\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_role_check_67a4ae3c",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.user.user_status_check_cfb53726",
+    "label": "Add check constraint \"user_status_check_cfb53726\" on \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "user_status_check_cfb53726",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_status_check_cfb53726\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_status_check_cfb53726",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"user_status_check_cfb53726\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_status_check_cfb53726\" CHECK (\"status\" IN ('ACTIVE', 'DISABLED', 'DELETED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_status_check_cfb53726\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_status_check_cfb53726",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.user.user_username_key",
+    "label": "Add unique constraint on \"user\" (username)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "user_username_key",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_username_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_username_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"user_username_key\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_username_key\" UNIQUE (\"username\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_username_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_username_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.auditLog.auditLog_recordType_recordId_idx_f92c2ef6",
+    "label": "Create index \"auditLog_recordType_recordId_idx_f92c2ef6\" on \"auditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "auditLog_recordType_recordId_idx_f92c2ef6",
+        "table": "auditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"auditLog_recordType_recordId_idx_f92c2ef6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_recordType_recordId_idx_f92c2ef6\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"auditLog_recordType_recordId_idx_f92c2ef6\"",
+        "sql": "CREATE INDEX \"auditLog_recordType_recordId_idx_f92c2ef6\" ON \"public\".\"auditLog\" (\"recordType\", \"recordId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"auditLog_recordType_recordId_idx_f92c2ef6\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_recordType_recordId_idx_f92c2ef6\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.auditLog.auditLog_timestamp_idx_a2429bb8",
+    "label": "Create index \"auditLog_timestamp_idx_a2429bb8\" on \"auditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "auditLog_timestamp_idx_a2429bb8",
+        "table": "auditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"auditLog_timestamp_idx_a2429bb8\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_timestamp_idx_a2429bb8\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"auditLog_timestamp_idx_a2429bb8\"",
+        "sql": "CREATE INDEX \"auditLog_timestamp_idx_a2429bb8\" ON \"public\".\"auditLog\" (\"timestamp\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"auditLog_timestamp_idx_a2429bb8\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_timestamp_idx_a2429bb8\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.auditLog.auditLog_userId_idx_a489d58a",
+    "label": "Create index \"auditLog_userId_idx_a489d58a\" on \"auditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "auditLog_userId_idx_a489d58a",
+        "table": "auditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"auditLog_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"auditLog_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"auditLog_userId_idx_a489d58a\" ON \"public\".\"auditLog\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"auditLog_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"auditLog_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.family.family_deletedAt_idx_a39f721c",
+    "label": "Create index \"family_deletedAt_idx_a39f721c\" on \"family\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "family_deletedAt_idx_a39f721c",
+        "table": "family"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"family_deletedAt_idx_a39f721c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"family_deletedAt_idx_a39f721c\"",
+        "sql": "CREATE INDEX \"family_deletedAt_idx_a39f721c\" ON \"public\".\"family\" (\"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"family_deletedAt_idx_a39f721c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.family.family_familyName_idx_196eb0ff",
+    "label": "Create index \"family_familyName_idx_196eb0ff\" on \"family\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "family_familyName_idx_196eb0ff",
+        "table": "family"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"family_familyName_idx_196eb0ff\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_familyName_idx_196eb0ff\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"family_familyName_idx_196eb0ff\"",
+        "sql": "CREATE INDEX \"family_familyName_idx_196eb0ff\" ON \"public\".\"family\" (\"familyName\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"family_familyName_idx_196eb0ff\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_familyName_idx_196eb0ff\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.family.family_side_idx_973cebef",
+    "label": "Create index \"family_side_idx_973cebef\" on \"family\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "family_side_idx_973cebef",
+        "table": "family"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"family_side_idx_973cebef\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_side_idx_973cebef\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"family_side_idx_973cebef\"",
+        "sql": "CREATE INDEX \"family_side_idx_973cebef\" ON \"public\".\"family\" (\"side\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"family_side_idx_973cebef\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"family_side_idx_973cebef\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.familyMember.familyMember_deletedAt_idx_a39f721c",
+    "label": "Create index \"familyMember_deletedAt_idx_a39f721c\" on \"familyMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "familyMember_deletedAt_idx_a39f721c",
+        "table": "familyMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"familyMember_deletedAt_idx_a39f721c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"familyMember_deletedAt_idx_a39f721c\"",
+        "sql": "CREATE INDEX \"familyMember_deletedAt_idx_a39f721c\" ON \"public\".\"familyMember\" (\"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"familyMember_deletedAt_idx_a39f721c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.familyMember.familyMember_familyId_idx_3d03045e",
+    "label": "Create index \"familyMember_familyId_idx_3d03045e\" on \"familyMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "familyMember_familyId_idx_3d03045e",
+        "table": "familyMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"familyMember_familyId_idx_3d03045e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_familyId_idx_3d03045e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"familyMember_familyId_idx_3d03045e\"",
+        "sql": "CREATE INDEX \"familyMember_familyId_idx_3d03045e\" ON \"public\".\"familyMember\" (\"familyId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"familyMember_familyId_idx_3d03045e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_familyId_idx_3d03045e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.familyMember.familyMember_rsvpStatus_idx_a66dcefc",
+    "label": "Create index \"familyMember_rsvpStatus_idx_a66dcefc\" on \"familyMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "familyMember_rsvpStatus_idx_a66dcefc",
+        "table": "familyMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"familyMember_rsvpStatus_idx_a66dcefc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_rsvpStatus_idx_a66dcefc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"familyMember_rsvpStatus_idx_a66dcefc\"",
+        "sql": "CREATE INDEX \"familyMember_rsvpStatus_idx_a66dcefc\" ON \"public\".\"familyMember\" (\"rsvpStatus\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"familyMember_rsvpStatus_idx_a66dcefc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"familyMember_rsvpStatus_idx_a66dcefc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_attendanceStatus_idx_72d5f1d4",
+    "label": "Create index \"guest_attendanceStatus_idx_72d5f1d4\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_attendanceStatus_idx_72d5f1d4",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_attendanceStatus_idx_72d5f1d4\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_attendanceStatus_idx_72d5f1d4\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_attendanceStatus_idx_72d5f1d4\"",
+        "sql": "CREATE INDEX \"guest_attendanceStatus_idx_72d5f1d4\" ON \"public\".\"guest\" (\"attendanceStatus\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_attendanceStatus_idx_72d5f1d4\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_attendanceStatus_idx_72d5f1d4\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_category_idx_f2600f8e",
+    "label": "Create index \"guest_category_idx_f2600f8e\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_category_idx_f2600f8e",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_category_idx_f2600f8e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_category_idx_f2600f8e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_category_idx_f2600f8e\"",
+        "sql": "CREATE INDEX \"guest_category_idx_f2600f8e\" ON \"public\".\"guest\" (\"category\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_category_idx_f2600f8e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_category_idx_f2600f8e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_deletedAt_idx_a39f721c",
+    "label": "Create index \"guest_deletedAt_idx_a39f721c\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_deletedAt_idx_a39f721c",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_deletedAt_idx_a39f721c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_deletedAt_idx_a39f721c\"",
+        "sql": "CREATE INDEX \"guest_deletedAt_idx_a39f721c\" ON \"public\".\"guest\" (\"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_deletedAt_idx_a39f721c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_familyId_idx_3d03045e",
+    "label": "Create index \"guest_familyId_idx_3d03045e\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_familyId_idx_3d03045e",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_familyId_idx_3d03045e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_familyId_idx_3d03045e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_familyId_idx_3d03045e\"",
+        "sql": "CREATE INDEX \"guest_familyId_idx_3d03045e\" ON \"public\".\"guest\" (\"familyId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_familyId_idx_3d03045e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_familyId_idx_3d03045e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_fullName_idx_08c13ff8",
+    "label": "Create index \"guest_fullName_idx_08c13ff8\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_fullName_idx_08c13ff8",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_fullName_idx_08c13ff8\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_fullName_idx_08c13ff8\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_fullName_idx_08c13ff8\"",
+        "sql": "CREATE INDEX \"guest_fullName_idx_08c13ff8\" ON \"public\".\"guest\" (\"fullName\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_fullName_idx_08c13ff8\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_fullName_idx_08c13ff8\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_phone_idx_8db23f45",
+    "label": "Create index \"guest_phone_idx_8db23f45\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_phone_idx_8db23f45",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_phone_idx_8db23f45\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_phone_idx_8db23f45\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_phone_idx_8db23f45\"",
+        "sql": "CREATE INDEX \"guest_phone_idx_8db23f45\" ON \"public\".\"guest\" (\"phone\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_phone_idx_8db23f45\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_phone_idx_8db23f45\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_rsvpStatus_idx_a66dcefc",
+    "label": "Create index \"guest_rsvpStatus_idx_a66dcefc\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_rsvpStatus_idx_a66dcefc",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_rsvpStatus_idx_a66dcefc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_rsvpStatus_idx_a66dcefc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_rsvpStatus_idx_a66dcefc\"",
+        "sql": "CREATE INDEX \"guest_rsvpStatus_idx_a66dcefc\" ON \"public\".\"guest\" (\"rsvpStatus\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_rsvpStatus_idx_a66dcefc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_rsvpStatus_idx_a66dcefc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_side_idx_973cebef",
+    "label": "Create index \"guest_side_idx_973cebef\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_side_idx_973cebef",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_side_idx_973cebef\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_side_idx_973cebef\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_side_idx_973cebef\"",
+        "sql": "CREATE INDEX \"guest_side_idx_973cebef\" ON \"public\".\"guest\" (\"side\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_side_idx_973cebef\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_side_idx_973cebef\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.spouse.spouse_deletedAt_idx_a39f721c",
+    "label": "Create index \"spouse_deletedAt_idx_a39f721c\" on \"spouse\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "spouse_deletedAt_idx_a39f721c",
+        "table": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"spouse_deletedAt_idx_a39f721c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"spouse_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"spouse_deletedAt_idx_a39f721c\"",
+        "sql": "CREATE INDEX \"spouse_deletedAt_idx_a39f721c\" ON \"public\".\"spouse\" (\"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"spouse_deletedAt_idx_a39f721c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"spouse_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ticket.ticket_deletedAt_idx_a39f721c",
+    "label": "Create index \"ticket_deletedAt_idx_a39f721c\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ticket_deletedAt_idx_a39f721c",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ticket_deletedAt_idx_a39f721c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ticket_deletedAt_idx_a39f721c\"",
+        "sql": "CREATE INDEX \"ticket_deletedAt_idx_a39f721c\" ON \"public\".\"ticket\" (\"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ticket_deletedAt_idx_a39f721c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_deletedAt_idx_a39f721c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ticket.ticket_familyId_idx_3d03045e",
+    "label": "Create index \"ticket_familyId_idx_3d03045e\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ticket_familyId_idx_3d03045e",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ticket_familyId_idx_3d03045e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_familyId_idx_3d03045e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ticket_familyId_idx_3d03045e\"",
+        "sql": "CREATE INDEX \"ticket_familyId_idx_3d03045e\" ON \"public\".\"ticket\" (\"familyId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ticket_familyId_idx_3d03045e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_familyId_idx_3d03045e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ticket.ticket_status_idx_e98638ab",
+    "label": "Create index \"ticket_status_idx_e98638ab\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ticket_status_idx_e98638ab",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ticket_status_idx_e98638ab\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_status_idx_e98638ab\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ticket_status_idx_e98638ab\"",
+        "sql": "CREATE INDEX \"ticket_status_idx_e98638ab\" ON \"public\".\"ticket\" (\"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ticket_status_idx_e98638ab\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_status_idx_e98638ab\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ticket.ticket_ticketNumber_idx_934212c9",
+    "label": "Create index \"ticket_ticketNumber_idx_934212c9\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ticket_ticketNumber_idx_934212c9",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ticket_ticketNumber_idx_934212c9\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_ticketNumber_idx_934212c9\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ticket_ticketNumber_idx_934212c9\"",
+        "sql": "CREATE INDEX \"ticket_ticketNumber_idx_934212c9\" ON \"public\".\"ticket\" (\"ticketNumber\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ticket_ticketNumber_idx_934212c9\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ticket_ticketNumber_idx_934212c9\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.user.user_status_idx_e98638ab",
+    "label": "Create index \"user_status_idx_e98638ab\" on \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "user_status_idx_e98638ab",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"user_status_idx_e98638ab\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user_status_idx_e98638ab\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"user_status_idx_e98638ab\"",
+        "sql": "CREATE INDEX \"user_status_idx_e98638ab\" ON \"public\".\"user\" (\"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"user_status_idx_e98638ab\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user_status_idx_e98638ab\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.auditLog.auditLog_userId_fkey",
+    "label": "Add foreign key \"auditLog_userId_fkey\" on \"auditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "auditLog_userId_fkey",
+        "table": "auditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"auditLog_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "auditLog_userId_fkey",
+          "public",
+          "\"public\".\"auditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"auditLog_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"auditLog\"\nADD CONSTRAINT \"auditLog_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"auditLog_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "auditLog_userId_fkey",
+          "public",
+          "\"public\".\"auditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.familyMember.familyMember_familyId_fkey",
+    "label": "Add foreign key \"familyMember_familyId_fkey\" on \"familyMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "familyMember_familyId_fkey",
+        "table": "familyMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"familyMember_familyId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "familyMember_familyId_fkey",
+          "public",
+          "\"public\".\"familyMember\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"familyMember_familyId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"familyMember\"\nADD CONSTRAINT \"familyMember_familyId_fkey\"\nFOREIGN KEY (\"familyId\")\nREFERENCES \"public\".\"family\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"familyMember_familyId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "familyMember_familyId_fkey",
+          "public",
+          "\"public\".\"familyMember\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.guest.guest_familyId_fkey",
+    "label": "Add foreign key \"guest_familyId_fkey\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "guest_familyId_fkey",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"guest_familyId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_familyId_fkey",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"guest_familyId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"guest\"\nADD CONSTRAINT \"guest_familyId_fkey\"\nFOREIGN KEY (\"familyId\")\nREFERENCES \"public\".\"family\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"guest_familyId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_familyId_fkey",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.spouse.spouse_guestId_fkey",
+    "label": "Add foreign key \"spouse_guestId_fkey\" on \"spouse\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "spouse_guestId_fkey",
+        "table": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"spouse_guestId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_guestId_fkey",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"spouse_guestId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"spouse\"\nADD CONSTRAINT \"spouse_guestId_fkey\"\nFOREIGN KEY (\"guestId\")\nREFERENCES \"public\".\"guest\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"spouse_guestId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_guestId_fkey",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ticket.ticket_familyId_fkey",
+    "label": "Add foreign key \"ticket_familyId_fkey\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ticket_familyId_fkey",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ticket_familyId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_familyId_fkey",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ticket_familyId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\"\nADD CONSTRAINT \"ticket_familyId_fkey\"\nFOREIGN KEY (\"familyId\")\nREFERENCES \"public\".\"family\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ticket_familyId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_familyId_fkey",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ticket.ticket_guestId_fkey",
+    "label": "Add foreign key \"ticket_guestId_fkey\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ticket_guestId_fkey",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ticket_guestId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_guestId_fkey",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ticket_guestId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\"\nADD CONSTRAINT \"ticket_guestId_fkey\"\nFOREIGN KEY (\"guestId\")\nREFERENCES \"public\".\"guest\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ticket_guestId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_guestId_fkey",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  }
+]
