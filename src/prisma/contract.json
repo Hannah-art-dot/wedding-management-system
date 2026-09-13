@@ -125,6 +125,10 @@
                 "value": "ISSUED"
               },
               {
+                "name": "UNUSED",
+                "value": "UNUSED"
+              },
+              {
                 "name": "PARTIAL",
                 "value": "PARTIAL"
               },
@@ -692,6 +696,13 @@
                   "kind": "scalar"
                 }
               },
+              "numberAttending": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "phone": {
                 "nullable": true,
                 "type": {
@@ -829,6 +840,9 @@
                 "id": {
                   "column": "id"
                 },
+                "numberAttending": {
+                  "column": "numberAttending"
+                },
                 "phone": {
                   "column": "phone"
                 },
@@ -949,6 +963,19 @@
                   "plane": "domain"
                 }
               },
+              "ticketStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ticket_status",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -1008,6 +1035,9 @@
                 },
                 "rsvpStatus": {
                   "column": "rsvpStatus"
+                },
+                "ticketStatus": {
+                  "column": "ticketStatus"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -1773,6 +1803,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "numberAttending": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
                 "phone": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -1935,6 +1970,11 @@
                   "expression": "\"rsvpStatus\" IN ('PENDING', 'CONFIRMED', 'DECLINED', 'MAYBE')",
                   "name": "spouse_rsvpStatus_check_b3adaca7",
                   "prefix": "spouse_rsvpStatus_check"
+                },
+                {
+                  "expression": "\"ticketStatus\" IN ('NOT_ISSUED', 'ISSUED', 'UNUSED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED')",
+                  "name": "spouse_ticketStatus_check_9dfe8b79",
+                  "prefix": "spouse_ticketStatus_check"
                 }
               ],
               "columns": {
@@ -2023,6 +2063,21 @@
                     "plane": "storage"
                   }
                 },
+                "ticketStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "NOT_ISSUED"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ticket_status",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "default": {
@@ -2093,8 +2148,8 @@
                   "prefix": "ticket_owner_xor"
                 },
                 {
-                  "expression": "\"status\" IN ('NOT_ISSUED', 'ISSUED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED')",
-                  "name": "ticket_status_check_e32863d7",
+                  "expression": "\"status\" IN ('NOT_ISSUED', 'ISSUED', 'UNUSED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED')",
+                  "name": "ticket_status_check_56bbfcab",
                   "prefix": "ticket_status_check"
                 }
               ],
@@ -2420,6 +2475,7 @@
               "values": [
                 "NOT_ISSUED",
                 "ISSUED",
+                "UNUSED",
                 "PARTIAL",
                 "USED",
                 "LOST",
@@ -2449,7 +2505,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "57ff5ac5b449091e6063e18b046f7eb5740a88592ab044a246e986cb54e2ebe2"
+    "storageHash": "7af09fe1767b89ce55dce93017a693f90fb79e137dcda78e5b69fae2139a9d81"
   },
   "execution": {
     "executionHash": "32e5a4b1ee54fb12d78cd1e46f23473e64aaf525a0180f27fcded836047945da",

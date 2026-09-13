@@ -1,25 +1,24 @@
 "use client";
 
-import { useRef, useState, startTransition, useEffect } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
+import { Check, Loader2, Search, Trash2 } from "lucide-react";
 import type { CheckInSearchResult } from "@/services/check-in";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { canManageGuests, type SessionUser } from "@/lib/auth-shared";
+import { cn } from "@/lib/utils";
 
 type Banner =
-  | { kind: "success"; text: string }
-  | { kind: "warning"; text: string }
-  | { kind: "error"; text: string }
+  | { kind: "success" | "warning" | "destructive"; text: string }
   | null;
 
 const SIDE_LABEL: Record<string, string> = {
-  BRIDE: "Bride",
-  GROOM: "Groom",
-  NEUTRAL: "Neutral",
-};
-
-const RSVP_LABEL: Record<string, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  DECLINED: "Declined",
-  MAYBE: "Maybe",
+  BRIDE: "BRIDE",
+  GROOM: "GROOM",
+  NEUTRAL: "NEUTRAL",
 };
 
 export function CheckInClient() {
@@ -27,14 +26,24 @@ export function CheckInClient() {
   const [results, setResults] = useState<CheckInSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CheckInSearchResult | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
-  const [statusText, setStatusText] = useState("Results appear as you type");
+  const [user, setUser] = useState<SessionUser | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
 
+  const isAdmin = user ? canManageGuests(user.role) : false;
+
   useEffect(() => {
     inputRef.current?.focus();
+    void fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) setUser(data.user);
+      })
+      .catch(() => {});
   }, []);
 
   async function searchNow(q: string) {
@@ -45,15 +54,11 @@ export function CheckInClient() {
       startTransition(() => {
         setResults([]);
         setSearching(false);
-        setStatusText(
-          trimmed.length > 0 ? "Type at least 2 characters" : "Results appear as you type",
-        );
       });
       return;
     }
 
     setSearching(true);
-    setStatusText("Searching…");
 
     try {
       const res = await fetch(`/api/check-in/search?q=${encodeURIComponent(trimmed)}`);
@@ -61,27 +66,17 @@ export function CheckInClient() {
       if (id !== requestId.current) return;
 
       if (!res.ok || !data.success) {
-        setBanner({ kind: "error", text: data.error ?? "Search failed." });
-        startTransition(() => {
-          setResults([]);
-          setStatusText("Search failed");
-        });
+        setBanner({ kind: "destructive", text: data.error ?? "Search failed." });
+        startTransition(() => setResults([]));
         return;
       }
 
-      const next = data.results as CheckInSearchResult[];
       startTransition(() => {
-        setResults(next);
-        setStatusText(
-          next.length > 0
-            ? `${next.length} match${next.length === 1 ? "" : "es"}`
-            : "No matches",
-        );
+        setResults(data.results as CheckInSearchResult[]);
       });
     } catch {
       if (id !== requestId.current) return;
-      setBanner({ kind: "error", text: "Network error while searching." });
-      setStatusText("Search failed");
+      setBanner({ kind: "destructive", text: "Network error while searching." });
     } finally {
       if (id === requestId.current) setSearching(false);
     }
@@ -103,7 +98,7 @@ export function CheckInClient() {
       const res = await fetch("/api/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId }),
+        body: JSON.stringify({ guestId, checkedInByUserId: user?.id }),
       });
       const data = await res.json();
 
@@ -130,103 +125,224 @@ export function CheckInClient() {
       inputRef.current?.focus();
       inputRef.current?.select();
     } catch {
-      setBanner({ kind: "error", text: "Network error during check-in." });
+      setBanner({ kind: "destructive", text: "Network error during check-in." });
     } finally {
       setCheckingId(null);
     }
   }
 
+  function requestDelete(guest: CheckInSearchResult) {
+    setPendingDelete(guest);
+  }
+
+  function cancelDelete() {
+    if (deletingId) return;
+    setPendingDelete(null);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const guest = pendingDelete;
+
+    setDeletingId(guest.guestId);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/guests/${guest.guestId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBanner({ kind: "destructive", text: data.error ?? "Could not delete guest." });
+        return;
+      }
+      setResults((prev) => prev.filter((r) => r.guestId !== guest.guestId));
+      setBanner({ kind: "success", text: data.message ?? "Guest deleted." });
+      setPendingDelete(null);
+    } catch {
+      setBanner({ kind: "destructive", text: "Network error while deleting." });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:py-10">
-      <header className="flex flex-col gap-2">
-        <p className="text-sm font-medium tracking-wide text-emerald-800 uppercase">
-          Venue gate
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
-          Guest check-in
-        </h1>
-        <p className="max-w-xl text-base text-stone-600">
-          Search by guest name, phone, family name, or ticket code — then tap Check In. No camera
-          or QR codes required.
-        </p>
-      </header>
-
-      <label className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-stone-700">Search guests</span>
-        <input
-          ref={inputRef}
-          type="search"
-          inputMode="search"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="Name, phone, or ticket code…"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          className="h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-lg text-stone-900 shadow-sm outline-none ring-emerald-700/30 placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4"
-        />
-        <span className="text-sm text-stone-500">{searching ? "Searching…" : statusText}</span>
-      </label>
-
-      {banner ? (
-        <div
-          role="status"
-          className={
-            banner.kind === "success"
-              ? "rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900"
-              : banner.kind === "warning"
-                ? "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
-                : "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-900"
-          }
-        >
-          {banner.text}
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:py-8">
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="search"
+            inputMode="search"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="Name or phone"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            className="h-14 rounded-xl border-border/90 bg-card pl-12 text-lg shadow-soft md:text-lg"
+          />
+          {searching ? (
+            <Loader2 className="absolute top-1/2 right-4 size-5 -translate-y-1/2 animate-spin text-accent" />
+          ) : null}
         </div>
-      ) : null}
+        {banner ? (
+          <Alert
+            variant={
+              banner.kind === "success"
+                ? "success"
+                : banner.kind === "warning"
+                  ? "warning"
+                  : "destructive"
+            }
+          >
+            {banner.text}
+          </Alert>
+        ) : null}
+      </div>
 
-      <ul className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-3 pb-8">
         {results.map((guest) => {
           const busy = checkingId === guest.guestId;
+          const deleting = deletingId === guest.guestId;
           const arrived = guest.alreadyCheckedIn;
           return (
-            <li
-              key={guest.guestId}
-              className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="truncate text-xl font-semibold text-stone-900">
-                    {guest.fullName}
-                  </h2>
-                  {arrived ? (
-                    <span className="text-sm font-medium text-emerald-700">Arrived</span>
-                  ) : null}
-                </div>
-                <p className="text-sm text-stone-600">
-                  {guest.familyName ?? "No family"} · {SIDE_LABEL[guest.side] ?? guest.side}
-                </p>
-                <p className="text-sm text-stone-600">
-                  RSVP: {RSVP_LABEL[guest.rsvpStatus] ?? guest.rsvpStatus}
-                  {guest.ticketNumber ? ` · Ticket ${guest.ticketNumber}` : ""}
-                  {` · Allowed ${guest.numberAllowed}`}
-                  {guest.numberUsed > 0 ? ` · Used ${guest.numberUsed}` : ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={busy || arrived}
-                onClick={() => void handleCheckIn(guest.guestId)}
-                className={
-                  arrived
-                    ? "h-14 shrink-0 rounded-xl bg-stone-200 px-8 text-base font-semibold text-stone-500"
-                    : "h-14 shrink-0 rounded-xl bg-emerald-800 px-8 text-base font-semibold text-white transition hover:bg-emerald-900 disabled:opacity-60"
-                }
+            <li key={guest.guestId}>
+              <Card
+                className={cn(
+                  "overflow-hidden",
+                  arrived && "border-success/30 bg-[color-mix(in_oklab,var(--success)_6%,var(--card))]",
+                )}
               >
-                {arrived ? "Checked in" : busy ? "Checking in…" : "Check In"}
-              </button>
+                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-display truncate text-2xl font-semibold tracking-tight">
+                        {guest.fullName}
+                      </h2>
+                      {arrived ? (
+                        <Badge variant="success" className="gap-1">
+                          <Check className="size-3" />
+                          Arrived
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
+                      <div>
+                        <dt className="text-muted-foreground">Side</dt>
+                        <dd className="font-medium">{SIDE_LABEL[guest.side] ?? guest.side}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Ticket</dt>
+                        <dd className="font-medium">{guest.ticketNumber ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Allowed</dt>
+                        <dd className="font-medium">{guest.numberAllowed}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Expected</dt>
+                        <dd className="font-medium">{guest.numberExpected}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Checked In</dt>
+                        <dd className="font-medium">{guest.numberUsed}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <div className="flex w-full flex-col gap-2 sm:w-auto">
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={busy || arrived || deleting}
+                      variant={arrived ? "secondary" : "champagne"}
+                      onClick={() => void handleCheckIn(guest.guestId)}
+                      className="h-14 w-full sm:min-w-[9.5rem]"
+                    >
+                      {arrived ? (
+                        "Checked in"
+                      ) : busy ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          Checking in…
+                        </>
+                      ) : (
+                        "Check In"
+                      )}
+                    </Button>
+                    {isAdmin ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={deleting || busy}
+                        className="text-destructive"
+                        onClick={() => requestDelete(guest)}
+                      >
+                        {deleting ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                        Delete Guest
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
             </li>
           );
         })}
       </ul>
+
+      {pendingDelete ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-guest-title"
+          onClick={cancelDelete}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") cancelDelete();
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-soft"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p id="delete-guest-title" className="font-display text-xl font-semibold tracking-tight">
+              Are you sure you want to delete this guest?
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{pendingDelete.fullName}</p>
+            <div className="mt-5 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={Boolean(deletingId)}
+                onClick={cancelDelete}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="champagne"
+                className="flex-1"
+                disabled={Boolean(deletingId)}
+                onClick={() => void confirmDelete()}
+              >
+                {deletingId ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Confirm"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -48,12 +48,61 @@ export type AttendanceStatus = (typeof AttendanceStatus)[keyof typeof Attendance
 export const TicketStatus = {
   NOT_ISSUED: "NOT_ISSUED",
   ISSUED: "ISSUED",
+  UNUSED: "UNUSED",
   PARTIAL: "PARTIAL",
   USED: "USED",
   LOST: "LOST",
   CANCELLED: "CANCELLED",
 } as const;
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];
+
+/** SRS §5 guest category presets (stored as Guest.category text). */
+export const GuestCategory = {
+  BRIDES_FAMILY: "Bride's Family",
+  GROOMS_FAMILY: "Groom's Family",
+  BRIDES_FRIENDS: "Bride's Friends",
+  GROOMS_FRIENDS: "Groom's Friends",
+  OTHER: "Other",
+} as const;
+export type GuestCategory = (typeof GuestCategory)[keyof typeof GuestCategory];
+
+export const GUEST_CATEGORY_OPTIONS = Object.values(GuestCategory);
+
+export const RSVP_LABELS: Record<RsvpStatus, string> = {
+  CONFIRMED: "Coming",
+  DECLINED: "Not Coming",
+  PENDING: "Pending",
+  MAYBE: "Maybe",
+};
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  NOT_ISSUED: "Not Issued",
+  ISSUED: "Issued",
+  UNUSED: "Unused",
+  PARTIAL: "Partial",
+  USED: "Used",
+  LOST: "Lost",
+  CANCELLED: "Cancelled",
+};
+
+export const SIDE_LABELS: Record<Side, string> = {
+  BRIDE: "Bride's Side",
+  GROOM: "Groom's Side",
+  NEUTRAL: "Neutral / Other",
+};
+
+export const GENDER_LABELS: Record<Gender, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+  UNSPECIFIED: "Unspecified",
+};
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  NOT_ARRIVED: "Not Arrived",
+  ARRIVED: "Arrived",
+  NO_SHOW: "No Show",
+};
 
 /** Dinner covers: only CONFIRMED attendees count. */
 export function countsTowardDinner(rsvp: RsvpStatus): boolean {

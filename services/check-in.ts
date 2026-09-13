@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
-import { AttendanceStatus, TicketStatus, type RsvpStatus, type Side } from "@/lib/enums";
+import { AttendanceStatus, RsvpStatus, TicketStatus, countsTowardDinner, type Side } from "@/lib/enums";
 import { nowInstant } from "@/lib/time";
 
 const SEARCH_LIMIT = 25;
@@ -15,7 +15,11 @@ export type CheckInSearchResult = {
   rsvpStatus: RsvpStatus;
   attendanceStatus: string;
   ticketNumber: string | null;
+  /** SRS §23 Allowed */
   numberAllowed: number;
+  /** SRS §23 Expected (CONFIRMED dinner covers for the party) */
+  numberExpected: number;
+  /** SRS §23 Checked In (ticket seats used) */
   numberUsed: number;
   alreadyCheckedIn: boolean;
 };
@@ -82,7 +86,11 @@ function pickTicket(guest: GuestRow, familyTickets: TicketRow[]): TicketRow | nu
   return familyTicket ?? null;
 }
 
-function toSearchResult(guest: GuestRow, familyTickets: TicketRow[]): CheckInSearchResult {
+function toSearchResult(
+  guest: GuestRow,
+  familyTickets: TicketRow[],
+  numberExpected: number,
+): CheckInSearchResult {
   const ticket = pickTicket(guest, familyTickets);
   return {
     guestId: guest.id,
@@ -94,9 +102,46 @@ function toSearchResult(guest: GuestRow, familyTickets: TicketRow[]): CheckInSea
     attendanceStatus: guest.attendanceStatus,
     ticketNumber: ticket?.ticketNumber ?? null,
     numberAllowed: ticket?.numberAllowed ?? 1,
+    numberExpected,
     numberUsed: ticket?.numberUsed ?? 0,
     alreadyCheckedIn: guest.attendanceStatus === AttendanceStatus.ARRIVED,
   };
+}
+
+/** Confirmed dinner covers for a guest's party (SRS Expected). */
+async function expectedForGuest(guest: GuestRow): Promise<number> {
+  if (guest.familyId) {
+    const [familyGuests, members] = await Promise.all([
+      db.orm.public.Guest.where({ familyId: guest.familyId })
+        .where((g) => g.deletedAt.isNull())
+        .where({ rsvpStatus: RsvpStatus.CONFIRMED })
+        .select("id")
+        .all(),
+      db.orm.public.FamilyMember.where({ familyId: guest.familyId })
+        .where((m) => m.deletedAt.isNull())
+        .where({ rsvpStatus: RsvpStatus.CONFIRMED })
+        .select("id")
+        .all(),
+    ]);
+    const guestIds = familyGuests.map((g) => g.id);
+    let spouses = 0;
+    if (guestIds.length > 0) {
+      const spouseRows = await db.orm.public.Spouse.where((s) => s.guestId.in(guestIds))
+        .where((s) => s.deletedAt.isNull())
+        .where({ rsvpStatus: RsvpStatus.CONFIRMED })
+        .select("id")
+        .all();
+      spouses = spouseRows.length;
+    }
+    return familyGuests.length + members.length + spouses;
+  }
+
+  let total = countsTowardDinner(guest.rsvpStatus) ? 1 : 0;
+  const spouse = await db.orm.public.Spouse.where({ guestId: guest.id })
+    .where((s) => s.deletedAt.isNull())
+    .first();
+  if (spouse && countsTowardDinner(spouse.rsvpStatus as RsvpStatus)) total += 1;
+  return total;
 }
 
 async function loadGuestsByIds(ids: string[]): Promise<GuestRow[]> {
@@ -195,10 +240,10 @@ export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchR
 
   const guests = await loadGuestsByIds([...idSet].slice(0, SEARCH_LIMIT));
   const familyTickets = guests.flatMap((g) => g.family?.tickets ?? []);
+  const visible = guests.filter((g) => g.family == null || g.family.deletedAt == null);
+  const expectedCounts = await Promise.all(visible.map((g) => expectedForGuest(g)));
 
-  return guests
-    .filter((g) => g.family == null || g.family.deletedAt == null)
-    .map((g) => toSearchResult(g, familyTickets));
+  return visible.map((g, i) => toSearchResult(g, familyTickets, expectedCounts[i] ?? 0));
 }
 
 /**
@@ -253,7 +298,8 @@ export async function checkInGuest(
     }
 
     const familyTickets = guest.family?.tickets ?? [];
-    const resultShape = () => toSearchResult(guest, familyTickets);
+    const numberExpected = await expectedForGuest(guest);
+    const resultShape = () => toSearchResult(guest, familyTickets, numberExpected);
 
     if (guest.attendanceStatus === AttendanceStatus.ARRIVED) {
       return {
@@ -336,7 +382,7 @@ export async function checkInGuest(
       ok: true,
       status: "checked_in",
       message: `${guest.fullName} checked in successfully.`,
-      guest: toSearchResult(guest, familyTickets),
+      guest: toSearchResult(guest, familyTickets, numberExpected),
     };
   });
 }

@@ -9,15 +9,18 @@ import {
   TicketStatus,
   type Gender,
 } from "@/lib/enums";
+import {
+  mapSpreadsheetRowsToImportRecords,
+  parseGuestSpreadsheet,
+} from "@/lib/guest-import-parse";
 import { nowInstant, toInstant } from "@/lib/time";
 
 // ============================================================================
 // POST /api/guests/import
 //
-// Bulk-imports guest/family records (e.g. from an Excel export).
-// Each record is one family unit: family, primary guest, optional spouse,
-// optional family members, and optional ticket (Ticket table is SOT for numbers).
-// Invalid rows are skipped; valid rows commit atomically.
+// Accepts either:
+// - multipart/form-data with a `file` field (.csv / .xlsx / .xls)
+// - application/json with { records: [...] } (programmatic / legacy)
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -110,38 +113,169 @@ interface RowError {
   reason: string;
 }
 
-export async function POST(req: NextRequest) {
+async function resolveRecordsFromRequest(req: NextRequest): Promise<
+  | { ok: true; records: unknown[]; importedByUserId?: string; fileName?: string; preErrors: RowError[] }
+  | { ok: false; response: NextResponse }
+> {
+  const contentType = req.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+    const file = form.get("file");
+    const importedByUserId = form.get("importedByUserId");
+    if (!(file instanceof File)) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { success: false, error: "Missing file. Upload a CSV or Excel file as field \"file\"." },
+          { status: 400 },
+        ),
+      };
+    }
+    if (file.size === 0) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { success: false, error: "The uploaded file is empty." },
+          { status: 400 },
+        ),
+      };
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { success: false, error: "File too large. Maximum size is 5 MB." },
+          { status: 400 },
+        ),
+      };
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { rows, parseErrors } = parseGuestSpreadsheet(buffer, file.name);
+    if (parseErrors.length > 0 && rows.length === 0) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            success: false,
+            error: parseErrors[0]?.reason ?? "Could not parse spreadsheet.",
+            errors: parseErrors,
+          },
+          { status: 400 },
+        ),
+      };
+    }
+
+    const mapped = mapSpreadsheetRowsToImportRecords(rows);
+    return {
+      ok: true,
+      records: mapped.records,
+      importedByUserId:
+        typeof importedByUserId === "string" && importedByUserId ? importedByUserId : undefined,
+      fileName: file.name,
+      preErrors: mapped.errors,
+    };
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          success: false,
+          error: "Send multipart file upload or a JSON body with records.",
+        },
+        { status: 400 },
+      ),
+    };
   }
 
   const parsed = importPayloadSchema.safeParse(body);
   if (!parsed.success) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          success: false,
+          error: "Payload failed schema validation.",
+          issues: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    records: parsed.data.records,
+    importedByUserId: parsed.data.importedByUserId,
+    preErrors: [],
+  };
+}
+
+export async function POST(req: NextRequest) {
+  const resolved = await resolveRecordsFromRequest(req);
+  if (!resolved.ok) return resolved.response;
+
+  const { importedByUserId, preErrors, fileName } = resolved;
+  const errors: RowError[] = [...preErrors];
+  const validRecords: { record: ImportRecord; rowIndex: number }[] = [];
+
+  resolved.records.forEach((raw, index) => {
+    const rowIndex =
+      preErrors.length >= 0 && fileName
+        ? // Spreadsheet rows already validated structurally; re-validate with zod.
+          // Approximate display index: counting only candidate records + skipped preErrors is messy,
+          // so use 1-based index among mapped records + 1 for header offset when from file.
+          index + 2
+        : index;
+    const parsed = importRecordSchema.safeParse(raw);
+    if (!parsed.success) {
+      const reason = parsed.error.issues.map((i) => i.message).join("; ");
+      const familyName =
+        raw && typeof raw === "object" && "familyName" in raw
+          ? String((raw as { familyName?: unknown }).familyName ?? "")
+          : undefined;
+      errors.push({
+        rowIndex,
+        familyName: familyName || undefined,
+        reason: reason || "Invalid row.",
+      });
+      return;
+    }
+    validRecords.push({ record: parsed.data, rowIndex });
+  });
+
+  if (validRecords.length === 0) {
     return NextResponse.json(
       {
         success: false,
-        error: "Payload failed schema validation.",
-        issues: parsed.error.issues.map((i) => ({
-          path: i.path.join("."),
-          message: i.message,
-        })),
+        error: "No valid rows to import.",
+        stats: {
+          totalRows: resolved.records.length + preErrors.length,
+          imported: 0,
+          failed: errors.length,
+          familiesCreated: 0,
+          guestsCreated: 0,
+          ticketsCreated: 0,
+        },
+        errors,
       },
-      { status: 400 },
+      { status: 422 },
     );
   }
 
-  const { records, importedByUserId } = parsed.data;
-  const errors: RowError[] = [];
-  const validRecords: { record: ImportRecord; rowIndex: number }[] = [];
+  const records = validRecords.map((v) => v.record);
 
   const ticketNumberOccurrences = new Map<string, number[]>();
-  records.forEach((record, rowIndex) => {
+  validRecords.forEach(({ record, rowIndex }) => {
     const t = record.ticket?.ticketNumber;
     if (!t) return;
     const list = ticketNumberOccurrences.get(t) ?? [];
@@ -167,41 +301,49 @@ export async function POST(req: NextRequest) {
     existingTickets.map((t: { ticketNumber: string }) => t.ticketNumber),
   );
 
-  records.forEach((record, rowIndex) => {
-    const t = record.ticket?.ticketNumber;
+  const filteredValid: { record: ImportRecord; rowIndex: number }[] = [];
+  for (const item of validRecords) {
+    const t = item.record.ticket?.ticketNumber;
     if (t && duplicateTicketNumbersInPayload.has(t)) {
       errors.push({
-        rowIndex,
-        familyName: record.familyName,
+        rowIndex: item.rowIndex,
+        familyName: item.record.familyName,
         reason: `Duplicate ticket number "${t}" appears in multiple rows of this import.`,
       });
-      return;
+      continue;
     }
     if (t && existingTicketNumbers.has(t)) {
       errors.push({
-        rowIndex,
-        familyName: record.familyName,
+        rowIndex: item.rowIndex,
+        familyName: item.record.familyName,
         reason: `Ticket number "${t}" already exists in the database.`,
       });
-      return;
+      continue;
     }
-    if (record.ticket?.usedDate && record.ticket.status !== TicketStatus.USED) {
+    if (item.record.ticket?.usedDate && item.record.ticket.status !== TicketStatus.USED) {
       errors.push({
-        rowIndex,
-        familyName: record.familyName,
+        rowIndex: item.rowIndex,
+        familyName: item.record.familyName,
         reason: `Ticket has a usedDate but status is not "USED".`,
       });
-      return;
+      continue;
     }
-    validRecords.push({ record, rowIndex });
-  });
+    filteredValid.push(item);
+  }
 
-  if (validRecords.length === 0) {
+  if (filteredValid.length === 0) {
     return NextResponse.json(
       {
         success: false,
         error: "No valid rows to import.",
-        stats: { totalRows: records.length, imported: 0, failed: errors.length },
+        stats: {
+          totalRows: records.length + preErrors.length,
+          imported: 0,
+          failed: errors.length,
+          familiesCreated: 0,
+          guestsCreated: 0,
+          ticketsCreated: 0,
+        },
         errors,
       },
       { status: 422 },
@@ -218,7 +360,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await db.transaction(async (tx) => {
-      for (const { record } of validRecords) {
+      for (const { record } of filteredValid) {
         const family = await tx.orm.public.Family.create({
           id: randomUUID(),
           familyName: record.familyName,
@@ -243,6 +385,7 @@ export async function POST(req: NextRequest) {
           side: record.guest.side,
           rsvpStatus: record.guest.rsvpStatus,
           rsvpReceivedAt: null,
+          numberAttending: null,
           attendanceStatus: record.guest.attendanceStatus,
           checkedInAt: null,
           checkedInByUserId: null,
@@ -261,6 +404,7 @@ export async function POST(req: NextRequest) {
             gender: (record.spouse.gender as Gender | undefined) ?? null,
             rsvpStatus: record.spouse.rsvpStatus,
             rsvpReceivedAt: null,
+            ticketStatus: TicketStatus.NOT_ISSUED,
             attendanceStatus: record.spouse.attendanceStatus,
             checkedInAt: null,
             checkedInByUserId: null,
@@ -322,8 +466,9 @@ export async function POST(req: NextRequest) {
           recordType: "Guest",
           recordId: null,
           metadata: JSON.stringify({
-            totalRows: records.length,
-            imported: validRecords.length,
+            fileName: fileName ?? null,
+            totalCandidateRows: resolved.records.length + preErrors.length,
+            imported: filteredValid.length,
             failed: errors.length,
             ...stats,
           }),
@@ -353,6 +498,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const totalRows = resolved.records.length + preErrors.length;
   const status = errors.length > 0 ? 207 : 200;
 
   return NextResponse.json(
@@ -360,11 +506,11 @@ export async function POST(req: NextRequest) {
       success: true,
       message:
         errors.length > 0
-          ? `Imported ${validRecords.length} of ${records.length} rows. ${errors.length} row(s) were skipped — see "errors".`
-          : `Successfully imported all ${validRecords.length} rows.`,
+          ? `Imported ${filteredValid.length} of ${totalRows} rows. ${errors.length} row(s) were skipped — see "errors".`
+          : `Successfully imported all ${filteredValid.length} rows.`,
       stats: {
-        totalRows: records.length,
-        imported: validRecords.length,
+        totalRows,
+        imported: filteredValid.length,
         failed: errors.length,
         ...stats,
       },

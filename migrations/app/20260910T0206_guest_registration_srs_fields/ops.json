@@ -1,0 +1,212 @@
+[
+  {
+    "id": "dropCheckConstraint.ticket.ticket_status_check_e32863d7",
+    "label": "Drop check constraint \"ticket_status_check_e32863d7\" on \"ticket\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ticket_status_check_e32863d7",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ticket_status_check_e32863d7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_status_check_e32863d7",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"ticket_status_check_e32863d7\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\" DROP CONSTRAINT \"ticket_status_check_e32863d7\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ticket_status_check_e32863d7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_status_check_e32863d7",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.numberAttending",
+    "label": "Add column \"numberAttending\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "numberAttending",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"numberAttending\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "numberAttending"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"numberAttending\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"numberAttending\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"numberAttending\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "numberAttending"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.spouse.ticketStatus",
+    "label": "Add column \"ticketStatus\" to \"spouse\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "ticketStatus",
+        "table": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"ticketStatus\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "spouse",
+          "ticketStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"ticketStatus\"",
+        "sql": "ALTER TABLE \"public\".\"spouse\" ADD COLUMN \"ticketStatus\" text DEFAULT 'NOT_ISSUED' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"ticketStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "spouse",
+          "ticketStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.spouse.spouse_ticketStatus_check_9dfe8b79",
+    "label": "Add check constraint \"spouse_ticketStatus_check_9dfe8b79\" on \"spouse\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "spouse_ticketStatus_check_9dfe8b79",
+        "table": "spouse"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"spouse_ticketStatus_check_9dfe8b79\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_ticketStatus_check_9dfe8b79",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"spouse_ticketStatus_check_9dfe8b79\"",
+        "sql": "ALTER TABLE \"public\".\"spouse\" ADD CONSTRAINT \"spouse_ticketStatus_check_9dfe8b79\" CHECK (\"ticketStatus\" IN ('NOT_ISSUED', 'ISSUED', 'UNUSED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"spouse_ticketStatus_check_9dfe8b79\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "spouse_ticketStatus_check_9dfe8b79",
+          "public",
+          "\"public\".\"spouse\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ticket.ticket_status_check_56bbfcab",
+    "label": "Add check constraint \"ticket_status_check_56bbfcab\" on \"ticket\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ticket_status_check_56bbfcab",
+        "table": "ticket"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ticket_status_check_56bbfcab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_status_check_56bbfcab",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ticket_status_check_56bbfcab\"",
+        "sql": "ALTER TABLE \"public\".\"ticket\" ADD CONSTRAINT \"ticket_status_check_56bbfcab\" CHECK (\"status\" IN ('NOT_ISSUED', 'ISSUED', 'UNUSED', 'PARTIAL', 'USED', 'LOST', 'CANCELLED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ticket_status_check_56bbfcab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ticket_status_check_56bbfcab",
+          "public",
+          "\"public\".\"ticket\""
+        ]
+      }
+    ]
+  }
+]
