@@ -7,14 +7,19 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="relative flex flex-1 flex-col justify-center overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgb(196_164_132_/_0.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgb(154_107_79_/_0.12),_transparent_50%)]"
-      />
-      <Suspense fallback={null}>
-        <LoginForm />
-      </Suspense>
+    <main
+      className="relative flex h-screen w-screen flex-col overflow-hidden before:absolute before:inset-0 before:z-[1] before:bg-black/45 before:content-['']"
+      style={{
+        backgroundImage: "url('/images/wedding-hero.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="relative z-10 flex h-full min-h-0 w-full flex-col">
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
+      </div>
     </main>
   );
 }

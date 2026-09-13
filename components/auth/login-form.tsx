@@ -3,10 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { FloralAccent } from "@/components/brand/floral-accent";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
@@ -43,59 +41,63 @@ export function LoginForm() {
   }
 
   return (
-    <div className="relative mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-10 sm:py-16">
-      <FloralAccent className="pointer-events-none absolute -top-4 -left-6 size-28 opacity-80 sm:size-36" />
-      <FloralAccent
-        mirror
-        className="pointer-events-none absolute -top-4 -right-6 size-28 opacity-80 sm:size-36"
-      />
-
-      <div className="relative z-10 text-center">
-        <p className="font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          Our Wedding
+    <div className="relative flex h-full w-full flex-col items-center justify-center px-4 pb-[10vh] pt-8 sm:pb-[12vh] sm:pt-10">
+      <div className="relative z-10 animate-fade-down text-center">
+        <p className="text-[0.7rem] font-medium tracking-[0.35em] text-[#e8d5a8]/80 uppercase">
+          Welcome
         </p>
+        <h1 className="mt-3 font-serif text-5xl font-semibold tracking-wide text-[#f0e0b8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] sm:text-6xl">
+          Our Wedding
+        </h1>
       </div>
 
-      <Card className="relative z-10 border-border/80 bg-card/95">
-        <CardContent className="pt-6">
-          <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)}>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Username</span>
-              <Input
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="h-12"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Password</span>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-12"
-              />
-            </label>
+      <div className="animate-fade-up-soft animate-delay-login-card relative z-10 mx-auto mt-8 w-full max-w-[20rem] transform rounded-2xl border border-stone-200/60 bg-white/80 p-4 shadow-xl backdrop-blur-md transition-all duration-700 ease-out sm:mt-10 sm:max-w-sm sm:p-5">
+        <form className="flex flex-col gap-3.5" onSubmit={(e) => void onSubmit(e)}>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium tracking-wide text-stone-600 uppercase">
+              Username
+            </span>
+            <Input
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="h-10 border-stone-200/80 bg-white/90 shadow-sm transition-all duration-200 focus-visible:border-accent focus-visible:ring-accent/30"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium tracking-wide text-stone-600 uppercase">
+              Password
+            </span>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="h-10 border-stone-200/80 bg-white/90 shadow-sm transition-all duration-200 focus-visible:border-accent focus-visible:ring-accent/30"
+            />
+          </label>
 
-            {error ? <Alert variant="destructive">{error}</Alert> : null}
+          {error ? <Alert variant="destructive">{error}</Alert> : null}
 
-            <Button type="submit" size="lg" variant="champagne" disabled={busy} className="mt-1">
-              {busy ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                "Sign in"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={busy}
+            className="mt-0.5 h-10 w-full bg-[#8b6b4a] text-[#fffcf8] shadow-soft transition-all duration-200 hover:bg-[#7a5d41] hover:shadow-elevated"
+          >
+            {busy ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Signing in…
+              </>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

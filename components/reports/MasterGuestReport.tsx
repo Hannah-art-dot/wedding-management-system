@@ -26,10 +26,10 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
         csvFilename="our-wedding-complete-guest-list.csv"
         onFetchLiveRows={onFetchLiveRows}
       />
-      <div className="report-print-surface overflow-x-auto rounded-xl border border-border/80 bg-card/95 print:border-0">
-        <table className="w-full min-w-[48rem] text-left text-sm">
+      <div className="report-print-surface overflow-x-auto rounded-2xl border border-stone-200/80 bg-white/80 shadow-sm backdrop-blur-sm print:border-0">
+        <table className="w-full min-w-[48rem] text-left text-sm text-stone-800">
           <thead>
-            <tr className="border-b border-border/70 bg-secondary/30">
+            <tr className="border-b border-stone-200/80 bg-stone-100/60">
               {[
                 "Guest",
                 "Family",
@@ -41,7 +41,10 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
                 "Allowed",
                 "Checked In",
               ].map((h) => (
-                <th key={h} className="px-3 py-3 text-xs font-medium tracking-wide uppercase">
+                <th
+                  key={h}
+                  className="px-3 py-3 text-xs font-medium tracking-[0.14em] text-stone-500 uppercase"
+                >
                   {h}
                 </th>
               ))}
@@ -49,7 +52,10 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.guestId} className="border-b border-border/50">
+              <tr
+                key={r.guestId}
+                className="border-b border-stone-200/50 transition-colors duration-200 hover:bg-stone-50/80"
+              >
                 <td className="px-3 py-2.5 font-medium">{r.fullName}</td>
                 <td className="px-3 py-2.5">{r.familyName ?? "—"}</td>
                 <td className="px-3 py-2.5">{r.side}</td>

@@ -178,7 +178,7 @@ export function CheckInClient() {
             placeholder="Name or phone"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="h-14 rounded-xl border-border/90 bg-card pl-12 text-lg shadow-soft md:text-lg"
+            className="h-14 rounded-xl border-stone-200/80 bg-white/90 pl-12 text-lg shadow-sm transition-all duration-200 md:text-lg"
           />
           {searching ? (
             <Loader2 className="absolute top-1/2 right-4 size-5 -translate-y-1/2 animate-spin text-accent" />
@@ -306,7 +306,7 @@ export function CheckInClient() {
           }}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-soft"
+            className="w-full max-w-sm rounded-2xl border border-stone-200/60 bg-white/90 p-5 shadow-xl backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
           >
             <p id="delete-guest-title" className="font-display text-xl font-semibold tracking-tight">

@@ -14,7 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {hideNav ? (
         <div className="flex flex-1 flex-col">{children}</div>
       ) : (
-        <div className="flex min-h-full flex-1 flex-col sm:flex-row">
+        <div className="flex min-h-full flex-1 flex-col md:flex-row">
           <SideNav />
           <div className="flex min-w-0 flex-1 flex-col">{children}</div>
         </div>

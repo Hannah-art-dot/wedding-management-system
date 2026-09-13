@@ -4,19 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[color,background-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-soft hover:bg-[color-mix(in_oklab,var(--primary)_92%,black)]",
+          "bg-primary text-primary-foreground shadow-soft hover:bg-[color-mix(in_oklab,var(--primary)_92%,black)] hover:shadow-elevated",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklab,var(--secondary)_88%,var(--foreground))]",
         outline:
-          "border border-border bg-card/70 text-foreground shadow-sm hover:border-accent hover:bg-card",
-        ghost: "hover:bg-secondary/80 hover:text-foreground",
+          "border border-stone-200 bg-white/70 text-stone-800 shadow-sm hover:border-accent hover:bg-white hover:shadow-soft",
+        ghost: "hover:bg-stone-200/60 hover:text-stone-900",
         champagne:
-          "bg-accent text-accent-foreground shadow-soft hover:bg-[color-mix(in_oklab,var(--accent)_90%,black)]",
+          "bg-accent text-accent-foreground shadow-soft hover:bg-[color-mix(in_oklab,var(--accent)_90%,black)] hover:shadow-elevated",
         success:
           "bg-success text-success-foreground shadow-soft hover:bg-[color-mix(in_oklab,var(--success)_92%,black)]",
       },

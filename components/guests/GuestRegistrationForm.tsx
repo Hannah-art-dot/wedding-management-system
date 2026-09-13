@@ -99,6 +99,7 @@ export function GuestRegistrationForm() {
         <BackButton href="/" />
       </div>
 
+      <div className="rounded-2xl border border-stone-200/80 bg-white/75 p-5 shadow-sm backdrop-blur-sm sm:p-7">
       <form className="space-y-4" onSubmit={(e) => void onSubmit(e)}>
         <div className="space-y-1.5">
           <Label htmlFor="fullName">FullName</Label>
@@ -237,6 +238,7 @@ export function GuestRegistrationForm() {
           <Link href="/guests/import">Import CSV / Excel</Link>
         </Button>
       </form>
+      </div>
     </div>
   );
 }
