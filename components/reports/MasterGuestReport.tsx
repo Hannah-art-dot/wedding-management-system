@@ -1,80 +1,111 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ReportActions } from "@/components/reports/report-actions";
 import { BackButton } from "@/components/layout/back-button";
 import {
+  GUEST_REPORT_COLUMNS,
+  GUEST_REPORT_HEADERS,
   fetchLiveGuestReportRows,
+  guestReportCellValues,
   type GuestReportRow,
 } from "@/components/reports/report-shared";
-import { formatCount } from "@/lib/utils";
 
 export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[] }) {
   const [rows, setRows] = useState(initialRows);
 
+  /** One live fetch drives table + print + CSV in parallel (exact same rows). */
   const onFetchLiveRows = useCallback(async () => {
     const live = await fetchLiveGuestReportRows();
     setRows(live);
     return live;
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      void fetchLiveGuestReportRows()
+        .then((live) => {
+          if (!cancelled) setRows(live);
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const id = setInterval(refresh, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:py-10">
-      <BackButton href="/" />
-      <ReportActions
-        title="Complete Guest List"
-        csvFilename="our-wedding-complete-guest-list.csv"
-        onFetchLiveRows={onFetchLiveRows}
-      />
-      <div className="report-print-surface overflow-x-auto rounded-2xl border border-stone-200/80 bg-white/80 shadow-sm backdrop-blur-sm print:border-0">
-        <table className="w-full min-w-[48rem] text-left text-sm text-stone-800">
-          <thead>
-            <tr className="border-b border-stone-200/80 bg-stone-100/60">
-              {[
-                "Guest",
-                "Family",
-                "Side",
-                "Category",
-                "RSVP",
-                "Attendance",
-                "Ticket",
-                "Allowed",
-                "Checked In",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="px-3 py-3 text-xs font-medium tracking-[0.14em] text-stone-500 uppercase"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.guestId}
-                className="border-b border-stone-200/50 transition-colors duration-200 hover:bg-stone-50/80"
-              >
-                <td className="px-3 py-2.5 font-medium">{r.fullName}</td>
-                <td className="px-3 py-2.5">{r.familyName ?? "—"}</td>
-                <td className="px-3 py-2.5">{r.side}</td>
-                <td className="px-3 py-2.5">{r.category ?? "—"}</td>
-                <td className="px-3 py-2.5">
-                  {r.rsvpStatus === "DECLINED" ? "NOT_COMING" : r.rsvpStatus}
-                </td>
-                <td className="px-3 py-2.5">{r.attendanceStatus}</td>
-                <td className="px-3 py-2.5 tabular-nums lining-nums">{r.ticketNumber ?? "—"}</td>
-                <td className="px-3 py-2.5 tabular-nums lining-nums">
-                  {r.numberAllowed != null ? formatCount(r.numberAllowed) : "—"}
-                </td>
-                <td className="px-3 py-2.5 tabular-nums lining-nums">
-                  {formatCount(r.numberUsed ?? 0)}
-                </td>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
+      <div className="mb-6">
+        <BackButton href="/" />
+      </div>
+
+      <div className="rounded-2xl border border-stone-200/80 bg-white/75 p-5 shadow-sm backdrop-blur-sm sm:p-7">
+        <div className="mb-5">
+          <ReportActions
+            title="Complete Guest List"
+            csvFilename="our-wedding-complete-guest-list.csv"
+            onFetchLiveRows={onFetchLiveRows}
+          />
+        </div>
+
+        <div className="report-print-surface overflow-x-auto">
+          <table className="w-full min-w-[48rem] text-left text-sm text-stone-800">
+            <thead>
+              <tr className="border-b border-stone-200/80 bg-stone-100/60">
+                {GUEST_REPORT_HEADERS.map((h) => (
+                  <th
+                    key={h}
+                    className="px-3 py-3 text-xs font-medium tracking-[0.14em] text-stone-500 uppercase"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={GUEST_REPORT_HEADERS.length}
+                    className="px-3 py-6 text-center text-muted-foreground"
+                  >
+                    No guests yet.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => {
+                  const cells = guestReportCellValues(r);
+                  return (
+                    <tr
+                      key={r.guestId}
+                      className="border-b border-stone-200/50 transition-colors duration-200 hover:bg-stone-50/80"
+                    >
+                      {GUEST_REPORT_COLUMNS.map((col, i) => (
+                        <td
+                          key={col.header}
+                          className={
+                            i === 0
+                              ? "px-3 py-2.5 font-medium"
+                              : col.header === "NumberAllowed" || col.header === "Checked In"
+                                ? "px-3 py-2.5 tabular-nums lining-nums"
+                                : "px-3 py-2.5"
+                          }
+                        >
+                          {cells[i]}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

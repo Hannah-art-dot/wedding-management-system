@@ -3,7 +3,7 @@ import { searchForCheckIn } from "@/services/check-in";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/check-in/search?q=... — text lookup by name, phone, family, or ticket. */
+/** GET /api/check-in/search?q=... — text lookup by full name or phone. */
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
 

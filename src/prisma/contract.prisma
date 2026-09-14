@@ -25,6 +25,12 @@ enum side {
   NEUTRAL = "NEUTRAL"
 }
 
+enum card_status {
+  @@type("pg/text@1")
+  WITH_CARD    = "With Card"
+  WITHOUT_CARD = "Without Card"
+}
+
 enum gender {
   @@type("pg/text@1")
   MALE        = "MALE"
@@ -100,8 +106,11 @@ model Guest {
   gender           gender?
   phone            String?
   email            String?
-  // Extensible category (Bride's Family, Groom's Friends, Other, custom…).
+  // Guest categories: Brides_Family, Grooms_Family, Brides_Friend,
+  // Grooms_Friend, VIP Family, VVIP Family.
   category         String?
+  // Invitation card at registration / check-in: "With Card" | "Without Card".
+  cardStatus       card_status        @default(WITH_CARD)
   side             side               @default(NEUTRAL)
   rsvpStatus       rsvp_status        @default(PENDING)
   rsvpReceivedAt   DateTime?
@@ -122,6 +131,7 @@ model Guest {
   @@index([phone])
   @@index([side])
   @@index([category])
+  @@index([cardStatus])
   @@index([rsvpStatus])
   @@index([attendanceStatus])
   @@index([deletedAt])

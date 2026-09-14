@@ -1,24 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
-import { AttendanceStatus, TicketStatus } from "@/lib/enums";
-import {
-  toStoredRsvp,
-  type SimpleGuestInput,
-} from "@/lib/simple-guest";
+import { AttendanceStatus, RsvpStatus, TicketStatus } from "@/lib/enums";
+import { type SimpleGuestInput } from "@/lib/simple-guest";
 import { nowInstant } from "@/lib/time";
 
-const CATEGORY_STORAGE: Record<SimpleGuestInput["category"], string> = {
-  BRIDES_FAMILY: "BRIDES_FAMILY",
-  GROOMS_FAMILY: "GROOMS_FAMILY",
-  BRIDES_FRIENDS: "BRIDES_FRIENDS",
-  GROOMS_FRIENDS: "GROOMS_FRIENDS",
-  OTHER: "OTHER",
-};
-
 export async function nextTicketNumber(): Promise<string> {
-  const tickets = await db.orm.public.Ticket.where((t) => t.deletedAt.isNull())
-    .select("ticketNumber")
-    .all();
+  // Include soft-deleted rows — ticket_ticketNumber_key is still unique for them.
+  const tickets = await db.orm.public.Ticket.select("ticketNumber").all();
 
   let max = 0;
   for (const t of tickets) {
@@ -29,20 +17,20 @@ export async function nextTicketNumber(): Promise<string> {
 }
 
 export async function registerSimpleGuest(input: SimpleGuestInput) {
-  const ticketNumber = input.ticketNumber.trim();
+  const ticketNumber = await nextTicketNumber();
   const existing = await db.orm.public.Ticket.where({ ticketNumber }).first();
   if (existing) {
-    throw new Error(`Ticket number "${ticketNumber}" already exists.`);
+    throw new Error(`Ticket number "${ticketNumber}" already exists. Retry.`);
   }
 
   return db.transaction(async (tx) => {
     const now = nowInstant();
     const phone = input.phone?.trim() || null;
-    const email = input.email?.trim() || null;
+    const familyName = (input.familyName?.trim() || input.fullName).trim();
 
     const family = await tx.orm.public.Family.create({
       id: randomUUID(),
-      familyName: input.familyName.trim(),
+      familyName,
       side: input.side,
       contactPerson: input.fullName.trim(),
       phone,
@@ -52,18 +40,18 @@ export async function registerSimpleGuest(input: SimpleGuestInput) {
       updatedAt: now,
     });
 
-    const rsvpStatus = toStoredRsvp(input.rsvpStatus);
     const guest = await tx.orm.public.Guest.create({
       id: randomUUID(),
       familyId: family.id,
       fullName: input.fullName.trim(),
       gender: null,
       phone,
-      email,
-      category: CATEGORY_STORAGE[input.category],
+      email: null,
+      category: input.category,
+      cardStatus: input.cardStatus,
       side: input.side,
-      rsvpStatus,
-      rsvpReceivedAt: rsvpStatus !== "PENDING" ? now : null,
+      rsvpStatus: RsvpStatus.PENDING,
+      rsvpReceivedAt: null,
       numberAttending: input.numberAllowed,
       attendanceStatus: AttendanceStatus.NOT_ARRIVED,
       checkedInAt: null,

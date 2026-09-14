@@ -86,6 +86,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/reports") ||
       pathname.startsWith("/api/reports") ||
       pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/api/dashboard") ||
       pathname.startsWith("/users") ||
       pathname.startsWith("/api/users")) &&
     !canManageGuests(session.role)

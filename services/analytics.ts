@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import {
   AttendanceStatus,
+  CardStatus,
   RsvpStatus,
   Side,
   TicketStatus,
@@ -35,6 +36,8 @@ export type DashboardSummary = {
   arrived: number;
   /** Invited seats not yet checked in (totalInvited − arrived). */
   unarrived: number;
+  /** Live arrival rate: arrived / totalInvited × 100 (0 if no invitees). */
+  arrivalRatePercent: number;
   generatedAt: string;
 };
 
@@ -52,6 +55,7 @@ export type GuestReportRow = {
   email: string | null;
   familyName: string | null;
   category: string | null;
+  cardStatus: string;
   side: SideType;
   rsvpStatus: RsvpStatusType;
   attendanceStatus: string;
@@ -128,6 +132,7 @@ type Loaded = {
     phone: string | null;
     email: string | null;
     category: string | null;
+    cardStatus: string;
     side: string;
     rsvpStatus: string;
     attendanceStatus: string;
@@ -172,6 +177,7 @@ async function loadActiveDataset(): Promise<Loaded> {
         "phone",
         "email",
         "category",
+        "cardStatus",
         "side",
         "rsvpStatus",
         "attendanceStatus",
@@ -214,6 +220,7 @@ async function loadActiveDataset(): Promise<Loaded> {
       phone: g.phone,
       email: g.email,
       category: g.category,
+      cardStatus: g.cardStatus ?? CardStatus.WITH_CARD,
       side: g.side,
       rsvpStatus: g.rsvpStatus,
       attendanceStatus: g.attendanceStatus,
@@ -440,6 +447,8 @@ export async function getDashboardAnalytics(): Promise<{
     confirmedFamilyMembers,
     arrived,
     unarrived: Math.max(0, totalInvited - arrived),
+    arrivalRatePercent:
+      totalInvited > 0 ? Math.round((arrived / totalInvited) * 1000) / 10 : 0,
     generatedAt: new Date().toISOString(),
   };
 
@@ -511,6 +520,7 @@ export async function getGuestReportRows(filter?: {
       email: guest.email,
       familyName: family?.familyName ?? null,
       category: guest.category,
+      cardStatus: guest.cardStatus || CardStatus.WITH_CARD,
       side: guest.side as SideType,
       rsvpStatus: guest.rsvpStatus as RsvpStatusType,
       attendanceStatus: guest.attendanceStatus,

@@ -1,44 +1,51 @@
 import { z } from "zod";
-import { AttendanceStatus, RsvpStatus, Side, TicketStatus } from "@/lib/enums";
-import { optionalEmail, optionalPhone } from "@/lib/guest-schemas";
+import { AttendanceStatus, CardStatus, RsvpStatus, Side, TicketStatus } from "@/lib/enums";
+import { optionalPhone } from "@/lib/guest-schemas";
 
-/** Simplified guest registration (UI fields only). */
+/** Pre-invited categories only — used by Add Guest form / registration API. */
+export const PRE_INVITED_CATEGORIES = [
+  "Brides_Family",
+  "Grooms_Family",
+  "Brides_Friend",
+  "Grooms_Friend",
+  "VIP Family",
+  "VVIP Family",
+] as const;
+
+export type PreInvitedCategory = (typeof PRE_INVITED_CATEGORIES)[number];
+
+export const CARD_STATUS_VALUES = [
+  CardStatus.WITH_CARD,
+  CardStatus.WITHOUT_CARD,
+] as const;
+
+export type CardStatusValue = (typeof CARD_STATUS_VALUES)[number];
+
+/** All stored Guest.category values for labels / reports. */
+export const GUEST_CATEGORIES = [...PRE_INVITED_CATEGORIES] as const;
+
+export type GuestCategoryValue = (typeof GUEST_CATEGORIES)[number];
+
+/** Simplified guest registration (Add Guest form fields only). */
 export const simpleGuestSchema = z.object({
-  fullName: z.string().trim().min(1, "FullName is required"),
-  familyName: z.string().trim().min(1, "FamilyName is required"),
-  side: z.enum([Side.BRIDE, Side.GROOM]),
-  category: z.enum([
-    "BRIDES_FAMILY",
-    "GROOMS_FAMILY",
-    "BRIDES_FRIENDS",
-    "GROOMS_FRIENDS",
-    "OTHER",
-  ]),
-  ticketNumber: z.string().trim().min(1, "TicketNumber is required"),
-  numberAllowed: z.coerce.number().int().min(1),
-  /** UI may send NOT_COMING; stored as DECLINED. */
-  rsvpStatus: z.enum(["CONFIRMED", "NOT_COMING", "PENDING", "MAYBE", "DECLINED"]),
+  fullName: z.string().trim().min(1, "Full Name is required"),
   phone: optionalPhone,
-  email: optionalEmail,
+  familyName: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : undefined)),
+  side: z.enum([Side.BRIDE, Side.GROOM]),
+  category: z.enum(PRE_INVITED_CATEGORIES),
+  numberAllowed: z.coerce.number().int().min(1),
+  cardStatus: z.enum(CARD_STATUS_VALUES).default(CardStatus.WITH_CARD),
 });
 
 export type SimpleGuestInput = z.infer<typeof simpleGuestSchema>;
 
-export function toStoredRsvp(
-  value: SimpleGuestInput["rsvpStatus"],
-): (typeof RsvpStatus)[keyof typeof RsvpStatus] {
-  if (value === "NOT_COMING" || value === "DECLINED") return RsvpStatus.DECLINED;
-  if (value === "CONFIRMED") return RsvpStatus.CONFIRMED;
-  if (value === "MAYBE") return RsvpStatus.MAYBE;
-  return RsvpStatus.PENDING;
-}
+export const CATEGORY_LABELS = Object.fromEntries(
+  GUEST_CATEGORIES.map((c) => [c, c]),
+) as Record<GuestCategoryValue, GuestCategoryValue>;
 
-export const CATEGORY_LABELS = {
-  BRIDES_FAMILY: "BRIDES_FAMILY",
-  GROOMS_FAMILY: "GROOMS_FAMILY",
-  BRIDES_FRIENDS: "BRIDES_FRIENDS",
-  GROOMS_FRIENDS: "GROOMS_FRIENDS",
-  OTHER: "OTHER",
-} as const;
-
-export { AttendanceStatus, TicketStatus };
+export { AttendanceStatus, CardStatus, RsvpStatus, TicketStatus, Side };

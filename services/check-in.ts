@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
-import { AttendanceStatus, RsvpStatus, TicketStatus, countsTowardDinner, type Side } from "@/lib/enums";
+import {
+  AttendanceStatus,
+  CardStatus,
+  RsvpStatus,
+  TicketStatus,
+  countsTowardDinner,
+  type CardStatus as CardStatusType,
+  type Side as SideType,
+} from "@/lib/enums";
 import { nowInstant } from "@/lib/time";
 
 const SEARCH_LIMIT = 25;
@@ -11,7 +19,8 @@ export type CheckInSearchResult = {
   fullName: string;
   phone: string | null;
   familyName: string | null;
-  side: Side;
+  side: SideType;
+  cardStatus: CardStatusType;
   rsvpStatus: RsvpStatus;
   attendanceStatus: string;
   ticketNumber: string | null;
@@ -27,7 +36,7 @@ export type CheckInSearchResult = {
 export type CheckInResult =
   | {
       ok: true;
-      status: "checked_in";
+      status: "checked_in" | "undone";
       message: string;
       guest: CheckInSearchResult;
     }
@@ -60,7 +69,7 @@ type TicketRow = {
 type FamilyRow = {
   id: string;
   familyName: string;
-  side: Side;
+  side: SideType;
   deletedAt: Temporal.Instant | null;
   tickets?: TicketRow[];
 };
@@ -69,7 +78,8 @@ type GuestRow = {
   id: string;
   fullName: string;
   phone: string | null;
-  side: Side;
+  side: SideType;
+  cardStatus: CardStatusType;
   rsvpStatus: RsvpStatus;
   attendanceStatus: string;
   familyId: string | null;
@@ -98,6 +108,7 @@ function toSearchResult(
     phone: guest.phone,
     familyName: guest.family?.familyName ?? null,
     side: guest.side,
+    cardStatus: guest.cardStatus ?? CardStatus.WITH_CARD,
     rsvpStatus: guest.rsvpStatus,
     attendanceStatus: guest.attendanceStatus,
     ticketNumber: ticket?.ticketNumber ?? null,
@@ -184,76 +195,87 @@ async function loadGuestsByIds(ids: string[]): Promise<GuestRow[]> {
 }
 
 /**
- * Text guests by full name, phone, family name, or ticket number.
- * No camera/QR path — text lookup only.
+ * Search guests by full name or phone only (case-insensitive).
+ * Multi-word name queries require every token to appear in fullName
+ * (e.g. "Woyinshet Lema" matches that guest, not the whole family).
  */
 export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchResult[]> {
   const query = rawQuery.trim();
   if (query.length < MIN_QUERY_LENGTH) return [];
 
-  const pattern = patternFor(query);
-  const idSet = new Set<string>();
+  const tokens = query.split(/\s+/).filter(Boolean);
+  const leadPattern = patternFor(tokens[0] ?? query);
+  const phonePattern = patternFor(query);
 
-  const [byName, byPhone, byTicket, byFamily] = await Promise.all([
-    db.orm.public.Guest.where((g) => g.fullName.ilike(pattern))
+  const [byNameLead, byPhone] = await Promise.all([
+    db.orm.public.Guest.where((g) => g.fullName.ilike(leadPattern))
       .where((g) => g.deletedAt.isNull())
-      .select("id")
-      .limit(SEARCH_LIMIT)
+      .select("id", "fullName", "phone")
+      .limit(SEARCH_LIMIT * 4)
       .all(),
-    db.orm.public.Guest.where((g) => g.phone.ilike(pattern))
+    db.orm.public.Guest.where((g) => g.phone.ilike(phonePattern))
       .where((g) => g.deletedAt.isNull())
-      .select("id")
-      .limit(SEARCH_LIMIT)
-      .all(),
-    db.orm.public.Ticket.where((t) => t.ticketNumber.ilike(pattern))
-      .where((t) => t.deletedAt.isNull())
-      .select("id", "guestId", "familyId")
-      .limit(SEARCH_LIMIT)
-      .all(),
-    db.orm.public.Family.where((f) => f.familyName.ilike(pattern))
-      .where((f) => f.deletedAt.isNull())
-      .select("id")
+      .select("id", "fullName", "phone")
       .limit(SEARCH_LIMIT)
       .all(),
   ]);
 
-  for (const row of byName) idSet.add(row.id);
-  for (const row of byPhone) idSet.add(row.id);
+  const queryLower = query.toLowerCase();
+  const queryDigits = query.replace(/\D/g, "");
 
-  const familyIdsFromTickets = new Set<string>();
-  for (const ticket of byTicket) {
-    if (ticket.guestId) idSet.add(ticket.guestId);
-    if (ticket.familyId) familyIdsFromTickets.add(ticket.familyId);
+  const idSet = new Set<string>();
+
+  for (const row of byNameLead) {
+    const nameLower = row.fullName.toLowerCase();
+    const allTokensMatch = tokens.every((t) => nameLower.includes(t.toLowerCase()));
+    if (allTokensMatch) idSet.add(row.id);
   }
-  for (const family of byFamily) familyIdsFromTickets.add(family.id);
 
-  if (familyIdsFromTickets.size > 0) {
-    const familyGuests = await db.orm.public.Guest.where((g) =>
-      g.familyId.in([...familyIdsFromTickets]),
-    )
-      .where((g) => g.deletedAt.isNull())
-      .select("id")
-      .limit(SEARCH_LIMIT)
-      .all();
-    for (const row of familyGuests) idSet.add(row.id);
+  for (const row of byPhone) {
+    const phone = row.phone?.trim() ?? "";
+    if (!phone) continue;
+    const phoneLower = phone.toLowerCase();
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (
+      phoneLower.includes(queryLower) ||
+      (queryDigits.length >= 2 && phoneDigits.includes(queryDigits))
+    ) {
+      idSet.add(row.id);
+    }
   }
 
   const guests = await loadGuestsByIds([...idSet].slice(0, SEARCH_LIMIT));
   const familyTickets = guests.flatMap((g) => g.family?.tickets ?? []);
   const visible = guests.filter((g) => g.family == null || g.family.deletedAt == null);
-  const expectedCounts = await Promise.all(visible.map((g) => expectedForGuest(g)));
 
-  return visible.map((g, i) => toSearchResult(g, familyTickets, expectedCounts[i] ?? 0));
+  // Keep only guests whose name/phone match (no family/ticket bleed-through).
+  const filtered = visible.filter((g) => {
+    const nameLower = g.fullName.toLowerCase();
+    if (tokens.every((t) => nameLower.includes(t.toLowerCase()))) return true;
+    const phone = g.phone?.trim() ?? "";
+    if (!phone) return false;
+    const phoneLower = phone.toLowerCase();
+    const phoneDigits = phone.replace(/\D/g, "");
+    return (
+      phoneLower.includes(queryLower) ||
+      (queryDigits.length >= 2 && phoneDigits.includes(queryDigits))
+    );
+  });
+
+  const expectedCounts = await Promise.all(filtered.map((g) => expectedForGuest(g)));
+  return filtered.map((g, i) => toSearchResult(g, familyTickets, expectedCounts[i] ?? 0));
 }
 
 /**
- * Mark a guest as ARRIVED. Idempotent warning if already checked in.
- * Increments linked ticket numberUsed when capacity remains.
+ * Toggle check-in: mark ARRIVED (With/Without Card), or undo if already arrived.
+ * Increments/decrements linked ticket numberUsed when capacity allows.
  */
 export async function checkInGuest(
   guestId: string,
-  options?: { checkedInByUserId?: string },
+  options?: { checkedInByUserId?: string; cardStatus?: CardStatusType },
 ): Promise<CheckInResult> {
+  const cardStatus = options?.cardStatus ?? CardStatus.WITH_CARD;
+
   return db.transaction(async (tx) => {
     const guest = (await tx.orm.public.Guest.where({ id: guestId })
       .where((g) => g.deletedAt.isNull())
@@ -299,18 +321,64 @@ export async function checkInGuest(
 
     const familyTickets = guest.family?.tickets ?? [];
     const numberExpected = await expectedForGuest(guest);
-    const resultShape = () => toSearchResult(guest, familyTickets, numberExpected);
+    const ticket = pickTicket(guest, familyTickets);
 
+    // Already checked in → undo / uncheck.
     if (guest.attendanceStatus === AttendanceStatus.ARRIVED) {
+      const undoneAt = nowInstant();
+
+      await tx.orm.public.Guest.where({ id: guest.id }).update({
+        attendanceStatus: AttendanceStatus.NOT_ARRIVED,
+        checkedInAt: null,
+        checkedInByUserId: null,
+        updatedAt: undoneAt,
+      });
+
+      guest.attendanceStatus = AttendanceStatus.NOT_ARRIVED;
+
+      if (ticket && ticket.numberUsed > 0) {
+        const numberUsed = ticket.numberUsed - 1;
+        const status =
+          numberUsed <= 0
+            ? TicketStatus.ISSUED
+            : numberUsed >= ticket.numberAllowed
+              ? TicketStatus.USED
+              : TicketStatus.PARTIAL;
+
+        await tx.orm.public.Ticket.where({ id: ticket.id }).update({
+          numberUsed,
+          status,
+          usedDate: null,
+          updatedAt: undoneAt,
+        });
+
+        ticket.numberUsed = numberUsed;
+        ticket.status = status;
+      }
+
+      await tx.orm.public.AuditLog.create({
+        id: randomUUID(),
+        userId: options?.checkedInByUserId ?? null,
+        action: "CHECK_OUT",
+        recordType: "Guest",
+        recordId: guest.id,
+        metadata: JSON.stringify({
+          fullName: guest.fullName,
+          ticketNumber: ticket?.ticketNumber ?? null,
+          numberUsed: ticket?.numberUsed ?? null,
+          numberAllowed: ticket?.numberAllowed ?? null,
+        }),
+        timestamp: undoneAt,
+      });
+
       return {
-        ok: false,
-        status: "already_checked_in",
-        message: `${guest.fullName} is already checked in.`,
-        guest: resultShape(),
+        ok: true,
+        status: "undone",
+        message: `${guest.fullName} check-in undone.`,
+        guest: toSearchResult(guest, familyTickets, numberExpected),
       };
     }
 
-    const ticket = pickTicket(guest, familyTickets);
     if (
       ticket &&
       (ticket.status === TicketStatus.CANCELLED || ticket.status === TicketStatus.LOST)
@@ -319,7 +387,7 @@ export async function checkInGuest(
         ok: false,
         status: "ticket_blocked",
         message: `Ticket ${ticket.ticketNumber} is ${ticket.status.toLowerCase()} and cannot be used for check-in.`,
-        guest: resultShape(),
+        guest: toSearchResult(guest, familyTickets, numberExpected),
       };
     }
 
@@ -328,7 +396,7 @@ export async function checkInGuest(
         ok: false,
         status: "ticket_blocked",
         message: `Ticket ${ticket.ticketNumber} is at full capacity (${ticket.numberUsed}/${ticket.numberAllowed}).`,
-        guest: resultShape(),
+        guest: toSearchResult(guest, familyTickets, numberExpected),
       };
     }
 
@@ -336,12 +404,14 @@ export async function checkInGuest(
 
     await tx.orm.public.Guest.where({ id: guest.id }).update({
       attendanceStatus: AttendanceStatus.ARRIVED,
+      cardStatus,
       checkedInAt,
       checkedInByUserId: options?.checkedInByUserId ?? null,
       updatedAt: checkedInAt,
     });
 
     guest.attendanceStatus = AttendanceStatus.ARRIVED;
+    guest.cardStatus = cardStatus;
 
     if (ticket) {
       const numberUsed = ticket.numberUsed + 1;
@@ -371,6 +441,7 @@ export async function checkInGuest(
       recordId: guest.id,
       metadata: JSON.stringify({
         fullName: guest.fullName,
+        cardStatus,
         ticketNumber: ticket?.ticketNumber ?? null,
         numberUsed: ticket?.numberUsed ?? null,
         numberAllowed: ticket?.numberAllowed ?? null,
@@ -381,8 +452,24 @@ export async function checkInGuest(
     return {
       ok: true,
       status: "checked_in",
-      message: `${guest.fullName} checked in successfully.`,
+      message: `${guest.fullName} checked in (${cardStatus}).`,
       guest: toSearchResult(guest, familyTickets, numberExpected),
     };
+  });
+}
+
+export type CardCheckInInput = {
+  guestId: string;
+  cardStatus: CardStatusType;
+  checkedInByUserId?: string;
+};
+
+/** Check in a guest and record With Card / Without Card. */
+export async function checkInWithCardStatus(
+  input: CardCheckInInput,
+): Promise<CheckInResult> {
+  return checkInGuest(input.guestId, {
+    checkedInByUserId: input.checkedInByUserId,
+    cardStatus: input.cardStatus,
   });
 }

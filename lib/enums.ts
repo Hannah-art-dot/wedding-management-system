@@ -22,6 +22,15 @@ export const Side = {
 } as const;
 export type Side = (typeof Side)[keyof typeof Side];
 
+/** Invitation card status (Guest.cardStatus). */
+export const CardStatus = {
+  WITH_CARD: "With Card",
+  WITHOUT_CARD: "Without Card",
+} as const;
+export type CardStatus = (typeof CardStatus)[keyof typeof CardStatus];
+
+export const CARD_STATUS_OPTIONS = Object.values(CardStatus);
+
 export const Gender = {
   MALE: "MALE",
   FEMALE: "FEMALE",
@@ -56,13 +65,14 @@ export const TicketStatus = {
 } as const;
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];
 
-/** SRS §5 guest category presets (stored as Guest.category text). */
+/** Pre-invited guest category presets (Add Guest form). */
 export const GuestCategory = {
-  BRIDES_FAMILY: "Bride's Family",
-  GROOMS_FAMILY: "Groom's Family",
-  BRIDES_FRIENDS: "Bride's Friends",
-  GROOMS_FRIENDS: "Groom's Friends",
-  OTHER: "Other",
+  BRIDES_FAMILY: "Brides_Family",
+  GROOMS_FAMILY: "Grooms_Family",
+  BRIDES_FRIEND: "Brides_Friend",
+  GROOMS_FRIEND: "Grooms_Friend",
+  VIP_FAMILY: "VIP Family",
+  VVIP_FAMILY: "VVIP Family",
 } as const;
 export type GuestCategory = (typeof GuestCategory)[keyof typeof GuestCategory];
 

@@ -20,6 +20,7 @@ export function ReportActions({
 }: {
   title?: string;
   csvFilename: string;
+  /** Must refresh UI state AND return the same rows used for print/CSV. */
   onFetchLiveRows: () => Promise<GuestReportRow[]>;
 }) {
   const [busy, setBusy] = useState<"print" | "download" | null>(null);
@@ -32,6 +33,7 @@ export function ReportActions({
     setBusy(mode);
     setError(null);
     try {
+      // Single fetch → UI table updates via caller setState, then print/CSV use same array.
       const rows = await onFetchLiveRows();
       await action(rows);
     } catch (err) {
@@ -43,7 +45,6 @@ export function ReportActions({
 
   function printLive() {
     void withLiveRows("print", async () => {
-      // Let React paint refreshed attendance / RSVP before opening print.
       await new Promise((r) => requestAnimationFrame(() => r(undefined)));
       await new Promise((r) => setTimeout(r, 50));
       window.print();

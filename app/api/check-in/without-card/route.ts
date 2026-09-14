@@ -6,14 +6,11 @@ import { checkInWithCardStatus } from "@/services/check-in";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  guestId: z.string().uuid("guestId must be a valid UUID"),
-  cardStatus: z
-    .enum([CardStatus.WITH_CARD, CardStatus.WITHOUT_CARD])
-    .default(CardStatus.WITH_CARD),
+  guestId: z.string().uuid("Guest is required for Without Card."),
   checkedInByUserId: z.string().uuid().optional(),
 });
 
-/** POST /api/check-in — toggle ARRIVED / undo, and record Card Status on check-in. */
+/** POST /api/check-in/without-card — check in and set Card Status to Without Card. */
 export async function POST(req: NextRequest) {
   let body: unknown;
   try {
@@ -30,11 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid check-in payload.",
-        issues: parsed.error.issues.map((i) => ({
-          path: i.path.join("."),
-          message: i.message,
-        })),
+        error: parsed.error.issues[0]?.message ?? "Invalid Without Card payload.",
       },
       { status: 400 },
     );
@@ -43,19 +36,11 @@ export async function POST(req: NextRequest) {
   try {
     const result = await checkInWithCardStatus({
       guestId: parsed.data.guestId,
-      cardStatus: parsed.data.cardStatus,
+      cardStatus: CardStatus.WITHOUT_CARD,
       checkedInByUserId: parsed.data.checkedInByUserId,
     });
 
     if (!result.ok) {
-      const status =
-        result.status === "not_found"
-          ? 404
-          : result.status === "already_checked_in"
-            ? 409
-            : result.status === "ticket_blocked"
-              ? 409
-              : 400;
       return NextResponse.json(
         {
           success: false,
@@ -63,7 +48,7 @@ export async function POST(req: NextRequest) {
           message: result.message,
           guest: result.guest ?? null,
         },
-        { status },
+        { status: result.status === "error" || result.status === "not_found" ? 400 : 409 },
       );
     }
 
@@ -74,9 +59,9 @@ export async function POST(req: NextRequest) {
       guest: result.guest,
     });
   } catch (err) {
-    console.error("Check-in failed:", err);
+    console.error("Without Card check-in failed:", err);
     return NextResponse.json(
-      { success: false, error: "Check-in failed. Please try again." },
+      { success: false, error: "Without Card check-in failed. Please try again." },
       { status: 500 },
     );
   }

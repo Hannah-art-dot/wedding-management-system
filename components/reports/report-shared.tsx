@@ -1,25 +1,63 @@
-import { RSVP_LABELS, SIDE_LABELS, type RsvpStatus, type Side } from "@/lib/enums";
+import { CardStatus, RSVP_LABELS, SIDE_LABELS, type RsvpStatus, type Side } from "@/lib/enums";
 import type { FamilyReportRow, GuestReportRow } from "@/services/analytics";
 
 export type { FamilyReportRow, GuestReportRow };
 
-export const GUEST_EXPORT_HEADERS = [
-  "FullName",
-  "FamilyName",
-  "Side",
-  "Category",
-  "RSVPStatus",
-  "AttendanceStatus",
-  "TicketNumber",
-  "NumberAllowed",
-  "NumberCheckedIn",
-  "Phone",
-  "Email",
-  "SpouseName",
-  "Notes",
+/** Empty / missing cell value shared by UI table and CSV (exact mirror). */
+export const REPORT_EMPTY = "—";
+
+/**
+ * Single source of truth for the Complete Guest List report.
+ * UI table headers/cells and CSV headers/cells MUST come from this only.
+ */
+export const GUEST_REPORT_COLUMNS = [
+  {
+    header: "Full Name",
+    value: (r: GuestReportRow) => r.fullName || REPORT_EMPTY,
+  },
+  {
+    header: "Phone",
+    value: (r: GuestReportRow) => r.phone?.trim() || REPORT_EMPTY,
+  },
+  {
+    header: "Family Name",
+    value: (r: GuestReportRow) => r.familyName?.trim() || REPORT_EMPTY,
+  },
+  {
+    header: "Side",
+    value: (r: GuestReportRow) => r.side || REPORT_EMPTY,
+  },
+  {
+    header: "Category",
+    value: (r: GuestReportRow) => r.category?.trim() || REPORT_EMPTY,
+  },
+  {
+    header: "Card Status",
+    value: (r: GuestReportRow) => r.cardStatus?.trim() || CardStatus.WITH_CARD,
+  },
+  {
+    header: "NumberAllowed",
+    value: (r: GuestReportRow) =>
+      r.numberAllowed != null ? String(r.numberAllowed) : REPORT_EMPTY,
+  },
+  {
+    header: "Attendance",
+    value: (r: GuestReportRow) => r.attendanceStatus || REPORT_EMPTY,
+  },
+  {
+    header: "Checked In",
+    value: (r: GuestReportRow) => String(r.numberUsed ?? 0),
+  },
 ] as const;
 
-export type GuestExportRecord = Record<(typeof GUEST_EXPORT_HEADERS)[number], string | number>;
+export type GuestReportColumn = (typeof GUEST_REPORT_COLUMNS)[number];
+
+export const GUEST_REPORT_HEADERS = GUEST_REPORT_COLUMNS.map((c) => c.header);
+
+/** Canonical row values in column order — identical for UI cells and CSV fields. */
+export function guestReportCellValues(row: GuestReportRow): string[] {
+  return GUEST_REPORT_COLUMNS.map((col) => col.value(row));
+}
 
 function csvEscape(value: string | number | null | undefined): string {
   const s = value == null ? "" : String(value);
@@ -27,46 +65,14 @@ function csvEscape(value: string | number | null | undefined): string {
   return s;
 }
 
-export function guestRowToExportRecord(r: GuestReportRow): GuestExportRecord {
-  return {
-    FullName: r.fullName,
-    FamilyName: r.familyName ?? "",
-    Side: r.side,
-    Category: r.category ?? "",
-    RSVPStatus: r.rsvpStatus === "DECLINED" ? "NOT_COMING" : r.rsvpStatus,
-    AttendanceStatus: r.attendanceStatus,
-    TicketNumber: r.ticketNumber ?? "",
-    NumberAllowed: r.numberAllowed ?? "",
-    NumberCheckedIn: r.numberUsed ?? 0,
-    Phone: r.phone ?? "",
-    Email: r.email ?? "",
-    SpouseName: r.spouseName ?? "",
-    Notes: r.specialNotes ?? "",
-  };
-}
-
-export function guestRowsToExportRecords(rows: GuestReportRow[]): GuestExportRecord[] {
-  return rows.map(guestRowToExportRecord);
-}
-
+/** CSV built from the same column map + row order as the on-screen table. */
 export function guestRowsToCsv(rows: GuestReportRow[]): string {
-  const records = guestRowsToExportRecords(rows);
-  const lines = records.map((r) =>
-    GUEST_EXPORT_HEADERS.map((key) => csvEscape(r[key])).join(","),
+  const header = GUEST_REPORT_HEADERS.join(",");
+  const lines = rows.map((row) =>
+    guestReportCellValues(row).map(csvEscape).join(","),
   );
-  return [GUEST_EXPORT_HEADERS.join(","), ...lines].join("\n");
-}
-
-export async function guestRowsToXlsBlob(rows: GuestReportRow[]): Promise<Blob> {
-  const XLSX = await import("xlsx");
-  const records = guestRowsToExportRecords(rows);
-  const worksheet = XLSX.utils.json_to_sheet(records, {
-    header: [...GUEST_EXPORT_HEADERS],
-  });
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Guests");
-  const buffer = XLSX.write(workbook, { bookType: "xls", type: "array" });
-  return new Blob([buffer], { type: "application/vnd.ms-excel" });
+  // UTF-8 BOM helps Excel open accented names correctly.
+  return `\uFEFF${[header, ...lines].join("\n")}`;
 }
 
 export async function fetchLiveGuestReportRows(): Promise<GuestReportRow[]> {

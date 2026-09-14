@@ -54,6 +54,19 @@
               }
             ]
           },
+          "card_status": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "WITH_CARD",
+                "value": "With Card"
+              },
+              {
+                "name": "WITHOUT_CARD",
+                "value": "Without Card"
+              }
+            ]
+          },
           "gender": {
             "codecId": "pg/text@1",
             "members": [
@@ -620,6 +633,19 @@
                   "plane": "domain"
                 }
               },
+              "cardStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "card_status",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "category": {
                 "nullable": true,
                 "type": {
@@ -809,6 +835,9 @@
               "fields": {
                 "attendanceStatus": {
                   "column": "attendanceStatus"
+                },
+                "cardStatus": {
+                  "column": "cardStatus"
                 },
                 "category": {
                   "column": "category"
@@ -1712,6 +1741,11 @@
                   "prefix": "guest_attendanceStatus_check"
                 },
                 {
+                  "expression": "\"cardStatus\" IN ('With Card', 'Without Card')",
+                  "name": "guest_cardStatus_check_d583545f",
+                  "prefix": "guest_cardStatus_check"
+                },
+                {
                   "expression": "\"gender\" IN ('MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED')",
                   "name": "guest_gender_check_35ac3b49",
                   "prefix": "guest_gender_check"
@@ -1739,6 +1773,21 @@
                   "valueSet": {
                     "entityKind": "valueSet",
                     "entityName": "attendance_status",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "cardStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "With Card"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "card_status",
                     "namespaceId": "public",
                     "plane": "storage"
                   }
@@ -1888,6 +1937,14 @@
                   ],
                   "name": "guest_attendanceStatus_idx_72d5f1d4",
                   "prefix": "guest_attendanceStatus_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "cardStatus"
+                  ],
+                  "name": "guest_cardStatus_idx_265e0b62",
+                  "prefix": "guest_cardStatus_idx",
                   "unique": false
                 },
                 {
@@ -2444,6 +2501,13 @@
                 "NO_SHOW"
               ]
             },
+            "card_status": {
+              "kind": "valueSet",
+              "values": [
+                "With Card",
+                "Without Card"
+              ]
+            },
             "gender": {
               "kind": "valueSet",
               "values": [
@@ -2505,7 +2569,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7af09fe1767b89ce55dce93017a693f90fb79e137dcda78e5b69fae2139a9d81"
+    "storageHash": "de04632fadb183f8164fc54f00fa3e4ba35c27ea06e1f9df67c743cc9d94342f"
   },
   "execution": {
     "executionHash": "32e5a4b1ee54fb12d78cd1e46f23473e64aaf525a0180f27fcded836047945da",

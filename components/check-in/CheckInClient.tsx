@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
-import { Check, Loader2, Search, Trash2 } from "lucide-react";
+import { Check, Loader2, Search, Ticket, TicketX, Trash2 } from "lucide-react";
 import type { CheckInSearchResult } from "@/services/check-in";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { canManageGuests, type SessionUser } from "@/lib/auth-shared";
+import { CardStatus } from "@/lib/enums";
 import { cn } from "@/lib/utils";
 
 type Banner =
@@ -33,6 +34,7 @@ export function CheckInClient() {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const isAdmin = user ? canManageGuests(user.role) : false;
 
@@ -44,11 +46,18 @@ export function CheckInClient() {
         if (data?.user) setUser(data.user);
       })
       .catch(() => {});
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
   }, []);
 
   async function searchNow(q: string) {
     const id = ++requestId.current;
     const trimmed = q.trim();
+
+    abortRef.current?.abort();
 
     if (trimmed.length < 2) {
       startTransition(() => {
@@ -58,10 +67,15 @@ export function CheckInClient() {
       return;
     }
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     setSearching(true);
 
     try {
-      const res = await fetch(`/api/check-in/search?q=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`/api/check-in/search?q=${encodeURIComponent(trimmed)}`, {
+        signal: controller.signal,
+        cache: "no-store",
+      });
       const data = await res.json();
       if (id !== requestId.current) return;
 
@@ -74,7 +88,8 @@ export function CheckInClient() {
       startTransition(() => {
         setResults(data.results as CheckInSearchResult[]);
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       if (id !== requestId.current) return;
       setBanner({ kind: "destructive", text: "Network error while searching." });
     } finally {
@@ -86,19 +101,34 @@ export function CheckInClient() {
     setQuery(value);
     setBanner(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Instant clear while waiting for debounce when query is too short.
+    if (value.trim().length < 2) {
+      abortRef.current?.abort();
+      startTransition(() => {
+        setResults([]);
+        setSearching(false);
+      });
+      return;
+    }
+
+    setSearching(true);
     debounceRef.current = setTimeout(() => {
       void searchNow(value);
-    }, 280);
+    }, 300);
   }
 
-  async function handleCheckIn(guestId: string) {
+  async function handleCardCheckIn(
+    guestId: string,
+    cardStatus: typeof CardStatus.WITH_CARD | typeof CardStatus.WITHOUT_CARD,
+  ) {
     setCheckingId(guestId);
     setBanner(null);
     try {
       const res = await fetch("/api/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId, checkedInByUserId: user?.id }),
+        body: JSON.stringify({ guestId, cardStatus, checkedInByUserId: user?.id }),
       });
       const data = await res.json();
 
@@ -108,15 +138,10 @@ export function CheckInClient() {
         );
       }
 
-      if (res.status === 409 && data.status === "already_checked_in") {
-        setBanner({ kind: "warning", text: data.message });
-        return;
-      }
-
       if (!res.ok || !data.success) {
         setBanner({
           kind: "warning",
-          text: data.message ?? data.error ?? "Could not check in guest.",
+          text: data.message ?? data.error ?? "Could not update check-in.",
         });
         return;
       }
@@ -165,7 +190,7 @@ export function CheckInClient() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:py-8">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -184,6 +209,7 @@ export function CheckInClient() {
             <Loader2 className="absolute top-1/2 right-4 size-5 -translate-y-1/2 animate-spin text-accent" />
           ) : null}
         </div>
+
         {banner ? (
           <Alert
             variant={
@@ -200,6 +226,11 @@ export function CheckInClient() {
       </div>
 
       <ul className="flex flex-col gap-3 pb-8">
+        {query.trim().length >= 2 && !searching && results.length === 0 ? (
+          <li className="rounded-2xl border border-stone-200/80 bg-white/75 px-4 py-8 text-center text-muted-foreground shadow-sm backdrop-blur-sm">
+            No guests found
+          </li>
+        ) : null}
         {results.map((guest) => {
           const busy = checkingId === guest.guestId;
           const deleting = deletingId === guest.guestId;
@@ -221,8 +252,11 @@ export function CheckInClient() {
                       {arrived ? (
                         <Badge variant="success" className="gap-1">
                           <Check className="size-3" />
-                          Arrived
+                          Checked In
                         </Badge>
+                      ) : null}
+                      {guest.cardStatus === CardStatus.WITHOUT_CARD ? (
+                        <Badge variant="secondary">Without Card</Badge>
                       ) : null}
                     </div>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
@@ -233,6 +267,10 @@ export function CheckInClient() {
                       <div>
                         <dt className="text-muted-foreground">Ticket</dt>
                         <dd className="font-medium">{guest.ticketNumber ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Card Status</dt>
+                        <dd className="font-medium">{guest.cardStatus ?? CardStatus.WITH_CARD}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Allowed</dt>
@@ -250,25 +288,89 @@ export function CheckInClient() {
                   </div>
 
                   <div className="flex w-full flex-col gap-2 sm:w-auto">
-                    <Button
-                      type="button"
-                      size="lg"
-                      disabled={busy || arrived || deleting}
-                      variant={arrived ? "secondary" : "champagne"}
-                      onClick={() => void handleCheckIn(guest.guestId)}
-                      className="h-14 w-full sm:min-w-[9.5rem]"
-                    >
-                      {arrived ? (
-                        "Checked in"
-                      ) : busy ? (
-                        <>
+                    {arrived ? (
+                      <Button
+                        type="button"
+                        size="lg"
+                        disabled={busy || deleting}
+                        variant="secondary"
+                        onClick={() =>
+                          void handleCardCheckIn(
+                            guest.guestId,
+                            guest.cardStatus === CardStatus.WITHOUT_CARD
+                              ? CardStatus.WITHOUT_CARD
+                              : CardStatus.WITH_CARD,
+                          )
+                        }
+                        className="h-14 w-full sm:min-w-[10.5rem]"
+                      >
+                        {busy ? (
                           <Loader2 className="size-4 animate-spin" />
-                          Checking in…
-                        </>
-                      ) : (
-                        "Check In"
-                      )}
-                    </Button>
+                        ) : (
+                          <Check className="size-4" />
+                        )}
+                        Undo Check-In
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          size="lg"
+                          disabled={busy || deleting}
+                          variant="champagne"
+                          onClick={() =>
+                            void handleCardCheckIn(
+                              guest.guestId,
+                              guest.cardStatus === CardStatus.WITHOUT_CARD
+                                ? CardStatus.WITHOUT_CARD
+                                : CardStatus.WITH_CARD,
+                            )
+                          }
+                          className="h-14 w-full sm:min-w-[10.5rem]"
+                        >
+                          {busy ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Check className="size-4" />
+                          )}
+                          Check-In
+                        </Button>
+                        <Button
+                          type="button"
+                          size="lg"
+                          disabled={busy || deleting}
+                          variant="outline"
+                          onClick={() =>
+                            void handleCardCheckIn(guest.guestId, CardStatus.WITH_CARD)
+                          }
+                          className="h-12 w-full border-stone-200 bg-white/80 sm:min-w-[10.5rem]"
+                        >
+                          {busy ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Ticket className="size-4" />
+                          )}
+                          With Card
+                        </Button>
+                        <Button
+                          type="button"
+                          size="lg"
+                          variant="outline"
+                          disabled={busy || deleting}
+                          className="h-12 w-full border-stone-200 bg-white/80 sm:min-w-[10.5rem]"
+                          onClick={() =>
+                            void handleCardCheckIn(guest.guestId, CardStatus.WITHOUT_CARD)
+                          }
+                        >
+                          {busy ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <TicketX className="size-4" />
+                          )}
+                          Without Card
+                        </Button>
+                      </>
+                    )}
                     {isAdmin ? (
                       <Button
                         type="button"
