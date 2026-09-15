@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
 
-  if (q.length < 2) {
+  if (q.length < 1) {
     return NextResponse.json({
       success: true,
       results: [],
-      message: "Type at least 2 characters to search.",
+      message: "Type a letter or name to search.",
     });
   }
 

@@ -634,7 +634,7 @@
                 }
               },
               "cardStatus": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -1779,12 +1779,8 @@
                 },
                 "cardStatus": {
                   "codecId": "pg/text@1",
-                  "default": {
-                    "kind": "literal",
-                    "value": "With Card"
-                  },
                   "nativeType": "text",
-                  "nullable": false,
+                  "nullable": true,
                   "valueSet": {
                     "entityKind": "valueSet",
                     "entityName": "card_status",
@@ -2569,7 +2565,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "de04632fadb183f8164fc54f00fa3e4ba35c27ea06e1f9df67c743cc9d94342f"
+    "storageHash": "b4fbe6137542589e89e3e3ad7d08a3791cc4ee6c278894128e299c04671d9ddf"
   },
   "execution": {
     "executionHash": "32e5a4b1ee54fb12d78cd1e46f23473e64aaf525a0180f27fcded836047945da",

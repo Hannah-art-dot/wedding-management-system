@@ -56,6 +56,7 @@ const guestSchema = z.object({
   side: sideEnum,
   rsvpStatus: rsvpEnum,
   attendanceStatus: attendanceEnum,
+  numberAllowed: z.coerce.number().int().min(1).default(1),
 });
 
 const spouseSchema = z.object({
@@ -382,10 +383,14 @@ export async function POST(req: NextRequest) {
           phone: record.guest.phone ?? null,
           email: record.guest.email ?? null,
           category: record.guest.category ?? null,
+          cardStatus: null,
           side: record.guest.side,
           rsvpStatus: record.guest.rsvpStatus,
           rsvpReceivedAt: null,
-          numberAttending: null,
+          numberAttending:
+            record.guest.numberAllowed ??
+            record.ticket?.numberAllowed ??
+            1,
           attendanceStatus: record.guest.attendanceStatus,
           checkedInAt: null,
           checkedInByUserId: null,

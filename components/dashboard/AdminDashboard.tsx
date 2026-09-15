@@ -86,11 +86,11 @@ export function AdminDashboard({
               Bride&apos;s Side
             </p>
             <p className="mt-3 font-serif text-3xl font-semibold text-stone-800 tabular-nums lining-nums">
-              {formatCount(matrix.bride.coming)}
-              <span className="text-lg font-normal text-stone-500">
-                {" "}
-                / {formatCount(matrix.bride.invited)} invited
-              </span>
+              {formatCount(matrix.bride.arrived)}
+              <span className="text-lg font-normal text-stone-500"> checked in</span>
+            </p>
+            <p className="mt-1 text-sm text-stone-500 tabular-nums lining-nums">
+              {formatCount(matrix.bride.invited)} invited
             </p>
           </div>
           <div className="rounded-2xl border border-stone-200/80 bg-white/75 px-4 py-5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-soft">
@@ -98,11 +98,11 @@ export function AdminDashboard({
               Groom&apos;s Side
             </p>
             <p className="mt-3 font-serif text-3xl font-semibold text-stone-800 tabular-nums lining-nums">
-              {formatCount(matrix.groom.coming)}
-              <span className="text-lg font-normal text-stone-500">
-                {" "}
-                / {formatCount(matrix.groom.invited)} invited
-              </span>
+              {formatCount(matrix.groom.arrived)}
+              <span className="text-lg font-normal text-stone-500"> checked in</span>
+            </p>
+            <p className="mt-1 text-sm text-stone-500 tabular-nums lining-nums">
+              {formatCount(matrix.groom.invited)} invited
             </p>
           </div>
         </section>

@@ -19,6 +19,8 @@ export type MappedImportRecord = {
     rsvpStatus: RsvpStatus;
     attendanceStatus: "NOT_ARRIVED";
     gender?: "MALE" | "FEMALE" | "OTHER" | "UNSPECIFIED";
+    /** CSV NumberAllowed — stored on Guest.numberAttending */
+    numberAllowed: number;
   };
   spouse?: {
     name: string;
@@ -303,6 +305,7 @@ export function mapSpreadsheetRowsToImportRecords(rows: SpreadsheetRow[]): {
         rsvpStatus,
         attendanceStatus: "NOT_ARRIVED",
         gender: normalizeGender(row.gender ?? ""),
+        numberAllowed,
       },
     };
 

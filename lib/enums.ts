@@ -73,6 +73,7 @@ export const GuestCategory = {
   GROOMS_FRIEND: "Grooms_Friend",
   VIP_FAMILY: "VIP Family",
   VVIP_FAMILY: "VVIP Family",
+  CREW: "Crew",
 } as const;
 export type GuestCategory = (typeof GuestCategory)[keyof typeof GuestCategory];
 

@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.guest.cardStatus",
+    "label": "Add column \"cardStatus\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "cardStatus",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"cardStatus\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "cardStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"cardStatus\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"cardStatus\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"cardStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "cardStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.guest.guest_cardStatus_check_d583545f",
+    "label": "Add check constraint \"guest_cardStatus_check_d583545f\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "guest_cardStatus_check_d583545f",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"guest_cardStatus_check_d583545f\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_cardStatus_check_d583545f",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"guest_cardStatus_check_d583545f\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD CONSTRAINT \"guest_cardStatus_check_d583545f\" CHECK (\"cardStatus\" IN ('With Card', 'Without Card'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"guest_cardStatus_check_d583545f\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_cardStatus_check_d583545f",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_cardStatus_idx_265e0b62",
+    "label": "Create index \"guest_cardStatus_idx_265e0b62\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_cardStatus_idx_265e0b62",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_cardStatus_idx_265e0b62\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_cardStatus_idx_265e0b62\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_cardStatus_idx_265e0b62\"",
+        "sql": "CREATE INDEX \"guest_cardStatus_idx_265e0b62\" ON \"public\".\"guest\" (\"cardStatus\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_cardStatus_idx_265e0b62\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_cardStatus_idx_265e0b62\""
+        ]
+      }
+    ]
+  }
+]

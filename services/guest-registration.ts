@@ -171,6 +171,7 @@ export async function registerGuest(input: GuestRegistrationInput) {
       phone: emptyToNull(input.phone),
       email: emptyToNull(input.email),
       category: emptyToNull(input.category),
+      cardStatus: null,
       side: input.side,
       rsvpStatus: input.rsvpStatus,
       rsvpReceivedAt: input.rsvpStatus !== RsvpStatus.PENDING ? now : null,

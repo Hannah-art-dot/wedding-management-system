@@ -27,6 +27,7 @@ export function CheckInClient() {
   const [results, setResults] = useState<CheckInSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [cardStepGuestId, setCardStepGuestId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CheckInSearchResult | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
@@ -59,7 +60,7 @@ export function CheckInClient() {
 
     abortRef.current?.abort();
 
-    if (trimmed.length < 2) {
+    if (trimmed.length < 1) {
       startTransition(() => {
         setResults([]);
         setSearching(false);
@@ -87,6 +88,7 @@ export function CheckInClient() {
 
       startTransition(() => {
         setResults(data.results as CheckInSearchResult[]);
+        setCardStepGuestId(null);
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -102,8 +104,10 @@ export function CheckInClient() {
     setBanner(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    // Instant clear while waiting for debounce when query is too short.
-    if (value.trim().length < 2) {
+    const trimmed = value.trim();
+
+    // Instant clear when empty.
+    if (trimmed.length < 1) {
       abortRef.current?.abort();
       startTransition(() => {
         setResults([]);
@@ -113,9 +117,12 @@ export function CheckInClient() {
     }
 
     setSearching(true);
+    // Progressive name typing stays snappy; phone/other queries keep a short debounce.
+    const isNamePrefix = /^[A-Za-z][A-Za-z\s'\-]*$/.test(trimmed);
+    const delay = isNamePrefix ? (trimmed.length <= 2 ? 0 : 100) : 300;
     debounceRef.current = setTimeout(() => {
       void searchNow(value);
-    }, 300);
+    }, delay);
   }
 
   async function handleCardCheckIn(
@@ -146,6 +153,7 @@ export function CheckInClient() {
         return;
       }
 
+      setCardStepGuestId(null);
       setBanner({ kind: "success", text: data.message });
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -226,7 +234,7 @@ export function CheckInClient() {
       </div>
 
       <ul className="flex flex-col gap-3 pb-8">
-        {query.trim().length >= 2 && !searching && results.length === 0 ? (
+        {query.trim().length >= 1 && !searching && results.length === 0 ? (
           <li className="rounded-2xl border border-stone-200/80 bg-white/75 px-4 py-8 text-center text-muted-foreground shadow-sm backdrop-blur-sm">
             No guests found
           </li>
@@ -255,34 +263,25 @@ export function CheckInClient() {
                           Checked In
                         </Badge>
                       ) : null}
-                      {guest.cardStatus === CardStatus.WITHOUT_CARD ? (
-                        <Badge variant="secondary">Without Card</Badge>
-                      ) : null}
                     </div>
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-muted-foreground">Family Name</dt>
+                        <dd className="font-medium">{guest.familyName?.trim() || "—"}</dd>
+                      </div>
                       <div>
                         <dt className="text-muted-foreground">Side</dt>
                         <dd className="font-medium">{SIDE_LABEL[guest.side] ?? guest.side}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">Ticket</dt>
-                        <dd className="font-medium">{guest.ticketNumber ?? "—"}</dd>
+                        <dt className="text-muted-foreground">Category</dt>
+                        <dd className="font-medium">{guest.category?.trim() || "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">Card Status</dt>
-                        <dd className="font-medium">{guest.cardStatus ?? CardStatus.WITH_CARD}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">Allowed</dt>
-                        <dd className="font-medium">{guest.numberAllowed}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">Expected</dt>
-                        <dd className="font-medium">{guest.numberExpected}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">Checked In</dt>
-                        <dd className="font-medium">{guest.numberUsed}</dd>
+                        <dt className="text-muted-foreground">Number Allowed</dt>
+                        <dd className="font-medium tabular-nums lining-nums">
+                          {guest.numberAllowed}
+                        </dd>
                       </div>
                     </dl>
                   </div>
@@ -294,14 +293,15 @@ export function CheckInClient() {
                         size="lg"
                         disabled={busy || deleting}
                         variant="secondary"
-                        onClick={() =>
+                        onClick={() => {
+                          setCardStepGuestId(null);
                           void handleCardCheckIn(
                             guest.guestId,
                             guest.cardStatus === CardStatus.WITHOUT_CARD
                               ? CardStatus.WITHOUT_CARD
                               : CardStatus.WITH_CARD,
-                          )
-                        }
+                          );
+                        }}
                         className="h-14 w-full sm:min-w-[10.5rem]"
                       >
                         {busy ? (
@@ -311,39 +311,20 @@ export function CheckInClient() {
                         )}
                         Undo Check-In
                       </Button>
-                    ) : (
+                    ) : cardStepGuestId === guest.guestId ? (
                       <>
+                        <p className="text-center text-sm text-muted-foreground sm:text-left">
+                          Select card status
+                        </p>
                         <Button
                           type="button"
                           size="lg"
                           disabled={busy || deleting}
                           variant="champagne"
                           onClick={() =>
-                            void handleCardCheckIn(
-                              guest.guestId,
-                              guest.cardStatus === CardStatus.WITHOUT_CARD
-                                ? CardStatus.WITHOUT_CARD
-                                : CardStatus.WITH_CARD,
-                            )
-                          }
-                          className="h-14 w-full sm:min-w-[10.5rem]"
-                        >
-                          {busy ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Check className="size-4" />
-                          )}
-                          Check-In
-                        </Button>
-                        <Button
-                          type="button"
-                          size="lg"
-                          disabled={busy || deleting}
-                          variant="outline"
-                          onClick={() =>
                             void handleCardCheckIn(guest.guestId, CardStatus.WITH_CARD)
                           }
-                          className="h-12 w-full border-stone-200 bg-white/80 sm:min-w-[10.5rem]"
+                          className="h-12 w-full border-stone-200 sm:min-w-[10.5rem]"
                         >
                           {busy ? (
                             <Loader2 className="size-4 animate-spin" />
@@ -369,7 +350,29 @@ export function CheckInClient() {
                           )}
                           Without Card
                         </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy || deleting}
+                          className="text-muted-foreground"
+                          onClick={() => setCardStepGuestId(null)}
+                        >
+                          Cancel
+                        </Button>
                       </>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="lg"
+                        disabled={busy || deleting}
+                        variant="champagne"
+                        onClick={() => setCardStepGuestId(guest.guestId)}
+                        className="h-14 w-full sm:min-w-[10.5rem]"
+                      >
+                        <Check className="size-4" />
+                        Check-In
+                      </Button>
                     )}
                     {isAdmin ? (
                       <Button

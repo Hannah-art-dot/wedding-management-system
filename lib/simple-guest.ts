@@ -10,6 +10,7 @@ export const PRE_INVITED_CATEGORIES = [
   "Grooms_Friend",
   "VIP Family",
   "VVIP Family",
+  "Crew",
 ] as const;
 
 export type PreInvitedCategory = (typeof PRE_INVITED_CATEGORIES)[number];

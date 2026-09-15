@@ -1,10 +1,27 @@
-import { CardStatus, RSVP_LABELS, SIDE_LABELS, type RsvpStatus, type Side } from "@/lib/enums";
+import {
+  AttendanceStatus,
+  RSVP_LABELS,
+  SIDE_LABELS,
+  type RsvpStatus,
+  type Side,
+} from "@/lib/enums";
 import type { FamilyReportRow, GuestReportRow } from "@/services/analytics";
 
 export type { FamilyReportRow, GuestReportRow };
 
 /** Empty / missing cell value shared by UI table and CSV (exact mirror). */
 export const REPORT_EMPTY = "—";
+
+/** Ticket.numberAllowed when present, else Guest.numberAttending from DB. */
+function resolveReportNumberAllowed(r: GuestReportRow): string {
+  const candidates = [r.numberAllowed, r.numberAttending];
+  for (const value of candidates) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
+      return String(Math.floor(value));
+    }
+  }
+  return REPORT_EMPTY;
+}
 
 /**
  * Single source of truth for the Complete Guest List report.
@@ -33,20 +50,19 @@ export const GUEST_REPORT_COLUMNS = [
   },
   {
     header: "Card Status",
-    value: (r: GuestReportRow) => r.cardStatus?.trim() || CardStatus.WITH_CARD,
+    value: (r: GuestReportRow) => {
+      const status = r.cardStatus?.trim();
+      return status ? status : REPORT_EMPTY;
+    },
   },
   {
     header: "NumberAllowed",
-    value: (r: GuestReportRow) =>
-      r.numberAllowed != null ? String(r.numberAllowed) : REPORT_EMPTY,
-  },
-  {
-    header: "Attendance",
-    value: (r: GuestReportRow) => r.attendanceStatus || REPORT_EMPTY,
+    value: (r: GuestReportRow) => resolveReportNumberAllowed(r),
   },
   {
     header: "Checked In",
-    value: (r: GuestReportRow) => String(r.numberUsed ?? 0),
+    value: (r: GuestReportRow) =>
+      r.attendanceStatus === AttendanceStatus.ARRIVED ? "Yes" : "No",
   },
 ] as const;
 

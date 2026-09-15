@@ -110,7 +110,8 @@ model Guest {
   // Grooms_Friend, VIP Family, VVIP Family.
   category         String?
   // Invitation card at registration / check-in: "With Card" | "Without Card".
-  cardStatus       card_status        @default(WITH_CARD)
+  // Null until explicitly assigned (import leaves blank; Add Guest / Check-In set it).
+  cardStatus       card_status?
   side             side               @default(NEUTRAL)
   rsvpStatus       rsvp_status        @default(PENDING)
   rsvpReceivedAt   DateTime?

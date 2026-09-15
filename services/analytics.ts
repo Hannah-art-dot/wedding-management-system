@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import {
   AttendanceStatus,
-  CardStatus,
   RsvpStatus,
   Side,
   TicketStatus,
@@ -18,6 +17,8 @@ export type SideMetrics = {
   notComing: number;
   pending: number;
   expectedDinner: number;
+  /** Guests/seats checked in on this side (live). */
+  arrived: number;
 };
 
 export type DashboardSummary = {
@@ -55,7 +56,7 @@ export type GuestReportRow = {
   email: string | null;
   familyName: string | null;
   category: string | null;
-  cardStatus: string;
+  cardStatus: string | null;
   side: SideType;
   rsvpStatus: RsvpStatusType;
   attendanceStatus: string;
@@ -94,6 +95,7 @@ function emptySide(): SideMetrics {
     notComing: 0,
     pending: 0,
     expectedDinner: 0,
+    arrived: 0,
   };
 }
 
@@ -107,6 +109,7 @@ function addMetrics(a: SideMetrics, b: SideMetrics): SideMetrics {
     notComing: a.notComing + b.notComing,
     pending: a.pending + b.pending,
     expectedDinner: a.expectedDinner + b.expectedDinner,
+    arrived: a.arrived + b.arrived,
   };
 }
 
@@ -132,7 +135,7 @@ type Loaded = {
     phone: string | null;
     email: string | null;
     category: string | null;
-    cardStatus: string;
+    cardStatus: string | null;
     side: string;
     rsvpStatus: string;
     attendanceStatus: string;
@@ -220,7 +223,7 @@ async function loadActiveDataset(): Promise<Loaded> {
       phone: g.phone,
       email: g.email,
       category: g.category,
-      cardStatus: g.cardStatus ?? CardStatus.WITH_CARD,
+      cardStatus: g.cardStatus ?? "",
       side: g.side,
       rsvpStatus: g.rsvpStatus,
       attendanceStatus: g.attendanceStatus,
@@ -275,9 +278,6 @@ export async function getDashboardAnalytics(): Promise<{
   const [
     familiesBySide,
     guestRsvpBySide,
-    guestTicketSeatsBySide,
-    familyTicketSeatsBySide,
-    ticketSeatTotals,
     confirmedSpousesByGuestSide,
     confirmedMembersByFamilySide,
     leanGuests,
@@ -290,22 +290,6 @@ export async function getDashboardAnalytics(): Promise<{
     db.orm.public.Guest.where((g) => g.deletedAt.isNull())
       .groupBy("side", "rsvpStatus")
       .aggregate((a) => ({ count: a.count() })),
-
-    activeTickets()
-      .where((t) => t.guestId.isNotNull())
-      .include("guest", (g) => g.select("side"))
-      .select("numberAllowed", "guestId")
-      .all(),
-
-    activeTickets()
-      .where((t) => t.familyId.isNotNull())
-      .include("family", (f) => f.select("side"))
-      .select("numberAllowed", "familyId")
-      .all(),
-
-    activeTickets().aggregate((a) => ({
-      seatsUsed: a.sum("numberUsed"),
-    })),
 
     db.orm.public.Spouse.where((s) => s.deletedAt.isNull())
       .where({ rsvpStatus: RsvpStatus.CONFIRMED })
@@ -362,24 +346,6 @@ export async function getDashboardAnalytics(): Promise<{
     }
   }
 
-  let totalInvited = 0;
-
-  for (const t of guestTicketSeatsBySide) {
-    const side = t.guest?.side ?? Side.NEUTRAL;
-    const key = bucketSide(String(side));
-    const seats = num(t.numberAllowed);
-    totalInvited += seats;
-    sideBuckets[key].invited += seats;
-  }
-
-  for (const t of familyTicketSeatsBySide) {
-    const side = t.family?.side ?? Side.NEUTRAL;
-    const key = bucketSide(String(side));
-    const seats = num(t.numberAllowed);
-    totalInvited += seats;
-    sideBuckets[key].invited += seats;
-  }
-
   const guestsWithOwnTicket = new Set(
     leanTickets.map((t) => t.guestId).filter((id): id is string => Boolean(id)),
   );
@@ -387,9 +353,11 @@ export async function getDashboardAnalytics(): Promise<{
     leanTickets.map((t) => t.familyId).filter((id): id is string => Boolean(id)),
   );
 
+  // Unique guest rows only — never inflate from ticket seats / numberAttending / joins.
+  let totalInvited = 0;
   let withTickets = 0;
   let withoutTickets = 0;
-  let arrived = num(ticketSeatTotals.seatsUsed);
+  let arrived = 0;
 
   for (const guest of leanGuests) {
     const hasOwn = guestsWithOwnTicket.has(guest.id);
@@ -398,21 +366,20 @@ export async function getDashboardAnalytics(): Promise<{
     const hasTicket = hasOwn || hasFamily;
     const key = bucketSide(String(guest.side));
 
+    totalInvited += 1;
+    sideBuckets[key].invited += 1;
+
     if (hasTicket) {
       withTickets += 1;
       sideBuckets[key].withTickets += 1;
     } else {
       withoutTickets += 1;
       sideBuckets[key].withoutTickets += 1;
-      const seats =
-        guest.numberAttending != null && guest.numberAttending > 0
-          ? guest.numberAttending
-          : 1;
-      totalInvited += seats;
-      sideBuckets[key].invited += seats;
-      if (guest.attendanceStatus === AttendanceStatus.ARRIVED) {
-        arrived += 1;
-      }
+    }
+
+    if (guest.attendanceStatus === AttendanceStatus.ARRIVED) {
+      arrived += 1;
+      sideBuckets[key].arrived += 1;
     }
   }
 
@@ -520,7 +487,7 @@ export async function getGuestReportRows(filter?: {
       email: guest.email,
       familyName: family?.familyName ?? null,
       category: guest.category,
-      cardStatus: guest.cardStatus || CardStatus.WITH_CARD,
+      cardStatus: guest.cardStatus?.trim() || "",
       side: guest.side as SideType,
       rsvpStatus: guest.rsvpStatus as RsvpStatusType,
       attendanceStatus: guest.attendanceStatus,
