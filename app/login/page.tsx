@@ -10,7 +10,7 @@ export default function LoginPage() {
     <main
       className="relative flex h-screen w-screen flex-col overflow-hidden before:absolute before:inset-0 before:z-[1] before:bg-black/45 before:content-['']"
       style={{
-        backgroundImage: "url('/images/wedding-hero.jpg')",
+        backgroundImage: "url('/images/indoor_standing.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
