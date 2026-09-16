@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { BackButton } from "@/components/layout/back-button";
@@ -29,6 +29,14 @@ export function GuestRegistrationForm() {
   const [category, setCategory] = useState<PreInvitedCategory>("Brides_Family");
   const [numberAllowed, setNumberAllowed] = useState("1");
   const [cardStatus, setCardStatus] = useState<CardStatusValue>(CardStatus.WITH_CARD);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => {
+      setSaved(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -172,7 +180,20 @@ export function GuestRegistrationForm() {
           </div>
 
           {error ? <Alert variant="destructive">{error}</Alert> : null}
-          {saved ? <Alert>Guest saved.</Alert> : null}
+          {saved ? (
+            <div
+              role="status"
+              className="animate-fade-in inline-flex w-fit max-w-full items-center gap-2 rounded-lg border border-[#e7e0d6]/90 bg-[#f7f3ec] px-3 py-1.5 text-xs leading-snug text-stone-700"
+            >
+              <span
+                aria-hidden
+                className="size-1.5 shrink-0 rounded-full bg-[#7a9a86]"
+              />
+              <p className="font-medium text-stone-700">
+                Guest saved successfully!
+              </p>
+            </div>
+          ) : null}
 
           <Button type="submit" size="lg" variant="champagne" disabled={busy} className="w-full">
             {busy ? (

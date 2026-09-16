@@ -43,7 +43,7 @@ export function SiteHeader({
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
+    router.replace("/login?reason=logout");
     router.refresh();
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
@@ -24,6 +24,18 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  function clearCredentials() {
+    setUsername("");
+    setPassword("");
+  }
+
+  // Always start clean after logout / idle redirect / revisit of login.
+  useEffect(() => {
+    clearCredentials();
+    setError(null);
+    setBusy(false);
+  }, [searchParams]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -36,13 +48,16 @@ export function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
+        clearCredentials();
         setError(data.error ?? "Sign-in failed.");
         return;
       }
+      clearCredentials();
       const next = searchParams.get("next");
       router.replace(data.redirectTo ?? next ?? "/");
       router.refresh();
     } catch {
+      clearCredentials();
       setError("Network error. Please try again.");
     } finally {
       setBusy(false);
@@ -64,12 +79,14 @@ export function LoginForm() {
         <form
           className="animate-fade-up-soft animate-delay-login-card mt-10 flex w-full flex-col gap-7 sm:mt-12"
           onSubmit={(e) => void onSubmit(e)}
+          autoComplete="on"
         >
           <label className="flex flex-col gap-2">
             <span className="text-[0.7rem] font-medium tracking-[0.22em] text-[#e8d5a8]/90 uppercase">
               Username
             </span>
             <Input
+              name="username"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -83,6 +100,7 @@ export function LoginForm() {
               Password
             </span>
             <Input
+              name="password"
               type="password"
               autoComplete="current-password"
               value={password}
