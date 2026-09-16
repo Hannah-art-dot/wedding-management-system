@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { IDLE_TIMEOUT_MS } from "@/lib/auth-shared";
+import { performLogout } from "@/lib/auth-client";
 
 /** Logs out after IDLE_TIMEOUT_MS without pointer/keyboard activity (SRS). */
 export function IdleLogoutGuard() {
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -15,10 +15,7 @@ export function IdleLogoutGuard() {
     let timer: ReturnType<typeof setTimeout>;
 
     const logout = () => {
-      void fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-        router.replace("/login?reason=idle");
-        router.refresh();
-      });
+      void performLogout("/login?reason=idle");
     };
 
     const bump = () => {
@@ -34,7 +31,7 @@ export function IdleLogoutGuard() {
       clearTimeout(timer);
       for (const ev of events) window.removeEventListener(ev, bump);
     };
-  }, [pathname, router]);
+  }, [pathname]);
 
   return null;
 }

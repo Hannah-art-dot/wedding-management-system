@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
+import { performLogout } from "@/lib/auth-client";
 import { canManageGuests, type SessionUser } from "@/lib/auth-shared";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,6 @@ const linkActive = "bg-accent/35 text-stone-900 shadow-sm";
 
 export function SideNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -52,9 +52,8 @@ export function SideNav() {
 
   async function logout() {
     setMenuOpen(false);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login?reason=logout");
-    router.refresh();
+    setUser(null);
+    await performLogout("/login?reason=logout");
   }
 
   const isStaff = user?.role === "CHECKIN_STAFF";

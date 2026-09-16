@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { FloralCorner } from "@/components/brand/floral-accent";
 import { Button } from "@/components/ui/button";
+import { performLogout } from "@/lib/auth-client";
 import { canManageGuests, type SessionUser } from "@/lib/auth-shared";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,6 @@ export function SiteHeader({
   pathname?: string;
   compact?: boolean;
 }) {
-  const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
@@ -42,9 +41,8 @@ export function SiteHeader({
   ].filter((l) => l.show);
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login?reason=logout");
-    router.refresh();
+    setUser(null);
+    await performLogout("/login?reason=logout");
   }
 
   return (

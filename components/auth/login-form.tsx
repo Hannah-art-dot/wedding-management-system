@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { clearClientAuthState } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 const underlineField = cn(
@@ -29,8 +30,9 @@ export function LoginForm() {
     setPassword("");
   }
 
-  // Always start clean after logout / idle redirect / revisit of login.
+  // Wipe client session residue + form fields after logout / idle / revisit.
   useEffect(() => {
+    clearClientAuthState();
     clearCredentials();
     setError(null);
     setBusy(false);
@@ -44,6 +46,7 @@ export function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
@@ -80,14 +83,20 @@ export function LoginForm() {
           className="animate-fade-up-soft animate-delay-login-card mt-10 flex w-full flex-col gap-7 sm:mt-12"
           onSubmit={(e) => void onSubmit(e)}
           autoComplete="on"
+          method="post"
         >
           <label className="flex flex-col gap-2">
             <span className="text-[0.7rem] font-medium tracking-[0.22em] text-[#e8d5a8]/90 uppercase">
               Username
             </span>
             <Input
+              id="username"
               name="username"
+              type="text"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -100,6 +109,7 @@ export function LoginForm() {
               Password
             </span>
             <Input
+              id="password"
               name="password"
               type="password"
               autoComplete="current-password"
