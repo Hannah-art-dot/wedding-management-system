@@ -1,32 +1,17 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { FloralAccent } from "@/components/brand/floral-accent";
-import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SIDE_LABELS, type Side } from "@/lib/enums";
 import type { FamilySummary } from "@/services/guest-registration";
 
-export function FamilyDirectory() {
-  const [families, setFamilies] = useState<FamilySummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface FamilyDirectoryProps {
+  families: FamilySummary[];
+}
 
-  useEffect(() => {
-    void fetch("/api/families")
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok || !data.success) throw new Error(data.error ?? "Failed");
-        setFamilies(data.families);
-      })
-      .catch(() => setError("Could not load families."))
-      .finally(() => setLoading(false));
-  }, []);
-
+export function FamilyDirectory({ families }: FamilyDirectoryProps) {
   return (
     <div className="relative mx-auto w-full max-w-4xl px-4 py-8 sm:py-12">
       <FloralAccent className="pointer-events-none absolute top-2 left-0 size-28 opacity-35" />
@@ -55,15 +40,8 @@ export function FamilyDirectory() {
         </div>
       </header>
 
-      {error ? <Alert variant="destructive">{error}</Alert> : null}
-      {loading ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Loading families…
-        </p>
-      ) : null}
 
-      {!loading && families.length === 0 ? (
+      {families.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <Users className="size-8 text-muted-foreground" />
