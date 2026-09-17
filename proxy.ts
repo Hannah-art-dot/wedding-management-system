@@ -29,7 +29,7 @@ async function readSession(req: NextRequest): Promise<Pick<SessionPayload, "id" 
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/seed", "/api/health"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (
