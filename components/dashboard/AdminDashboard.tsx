@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cell, Pie, PieChart } from "recharts";
-import type { BrideGroomMatrix, DashboardSummary, SideMetrics } from "@/services/analytics";
+import type { BrideGroomMatrix, DashboardSummary, SideMetrics, CheckInEntry } from "@/services/analytics";
 import { formatCount } from "@/lib/utils";
 
 const COLORS = {
@@ -29,13 +29,7 @@ const PIE_ANIMATION = {
 
 type PieSlice = { key: string; value: number; color: string };
 
-type CheckInEntry = {
-  id: string;
-  guestName: string;
-  familyName: string | null;
-  side: "Bride" | "Groom" | "General";
-  time: string;
-};
+
 
 function PieMotionStyles() {
   return (
@@ -103,8 +97,31 @@ function FilledPieChart({
   strokeWidth?: number;
   animationDelay?: number;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const motionKey = data.map((d) => `${d.key}:${d.value}`).join("|");
   const loopDelay = `-${animationDelay}ms`;
+
+  if (!mounted) {
+    return (
+      <div
+        className="relative mx-auto shrink-0 flex items-center justify-center"
+        style={{ width: dimension, height: dimension }}
+      >
+        <div
+          className="pie-halo pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            animationDelay: loopDelay,
+            background: `radial-gradient(circle, ${accent}00 52%, ${accent}56 72%, ${accent}00 84%)`,
+          }}
+          aria-hidden
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -410,7 +427,7 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
     return true;
   });
 
-  const displayedCheckIns = filteredCheckIns.slice(0, 10);
+  const displayedCheckIns = filteredCheckIns;
 
   return (
     <div className="rounded-[1.5rem] border border-stone-200/80 bg-white px-5 py-6 shadow-sm sm:px-6 sm:py-7">
@@ -433,9 +450,9 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto mt-4">
+      <div className="overflow-y-auto max-h-[560px] mt-4">
         <table className="w-full text-left border-collapse">
-          <thead>
+          <thead className="sticky top-0 bg-white z-10 shadow-sm">
             <tr className="border-b border-stone-100 text-[0.68rem] font-semibold tracking-[0.18em] text-stone-400 uppercase">
               <th className="py-3 px-3 font-medium">Guest Name</th>
               <th className="py-3 px-3 font-medium">Family Name</th>
@@ -469,7 +486,9 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
                         {item.side}
                       </span>
                     </td>
-                    <td className="py-4 px-3 text-stone-500 tabular-nums">{item.time}</td>
+                    <td className="py-4 px-3 text-stone-500 tabular-nums">
+                      {new Date(item.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </td>
                     <td className="py-4 px-3 text-right">
                       <Link
                         href="/reports"
@@ -487,7 +506,7 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
       </div>
 
       <div className="mt-6 flex items-center justify-between pt-4 border-t border-stone-100 text-xs text-stone-500">
-        <span>Showing latest {displayedCheckIns.length} of {filteredCheckIns.length} arrivals</span>
+        <span>Showing all {filteredCheckIns.length} check-in entries</span>
         <Link href="/reports" className="font-semibold text-stone-800 hover:underline">
           View All Roster Entries →
         </Link>

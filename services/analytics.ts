@@ -21,6 +21,14 @@ export type SideMetrics = {
   arrived: number;
 };
 
+export type CheckInEntry = {
+  id: string;
+  guestName: string;
+  familyName: string | null;
+  side: "Bride" | "Groom" | "General";
+  time: string;
+};
+
 export type DashboardSummary = {
   totalFamilies: number;
   totalInvited: number;
@@ -269,6 +277,7 @@ function num(value: number | null | undefined): number {
 export async function getDashboardAnalytics(): Promise<{
   summary: DashboardSummary;
   matrix: BrideGroomMatrix;
+  recentCheckIns: CheckInEntry[];
 }> {
   const activeTickets = () =>
     db.orm.public.Ticket.where((t) => t.deletedAt.isNull()).where(
@@ -426,7 +435,22 @@ export async function getDashboardAnalytics(): Promise<{
     total: addMetrics(addMetrics(sideBuckets.bride, sideBuckets.groom), sideBuckets.neutral),
   };
 
-  return { summary, matrix };
+  const recentGuests = await db.orm.public.Guest
+    .where({ attendanceStatus: AttendanceStatus.ARRIVED })
+    .where((g) => g.deletedAt.isNull())
+    .include("family", (f) => f.select("familyName"))
+    .orderBy((g) => g.checkedInAt.desc())
+    .all();
+
+  const recentCheckIns: CheckInEntry[] = recentGuests.map((g) => ({
+    id: g.id,
+    guestName: g.fullName,
+    familyName: g.family?.familyName ?? null,
+    side: g.side === Side.BRIDE ? "Bride" : g.side === Side.GROOM ? "Groom" : "General",
+    time: g.checkedInAt ? g.checkedInAt.toString() : new Date().toISOString(),
+  }));
+
+  return { summary, matrix, recentCheckIns };
 }
 
 function ticketForGuest(
