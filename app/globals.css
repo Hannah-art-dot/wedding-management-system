@@ -150,6 +150,14 @@
   .animate-delay-login-card {
     animation-delay: 0.28s;
   }
+
+  .animate-pie-in {
+    animation: pie-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-pie-label {
+    animation: pie-label 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
 @keyframes fade-up {
@@ -191,6 +199,39 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes pie-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes pie-label {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pie-in,
+  .animate-pie-label,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-fade-up-soft,
+  .animate-fade-in {
+    animation: none !important;
   }
 }
 

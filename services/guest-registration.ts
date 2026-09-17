@@ -39,21 +39,31 @@ export async function listFamilies(): Promise<FamilySummary[]> {
 
   const summaries: FamilySummary[] = [];
 
-  for (const family of families) {
-    const guests = await db.orm.public.Guest.where({ familyId: family.id })
-      .where((g) => g.deletedAt.isNull())
-      .all();
-    const members = await db.orm.public.FamilyMember.where({ familyId: family.id })
-      .where((m) => m.deletedAt.isNull())
-      .all();
+  const familyIds = families.map((f) => f.id);
+  
+  const allGuests = familyIds.length > 0 
+    ? await db.orm.public.Guest.where((g) => g.familyId.in(familyIds)).where((g) => g.deletedAt.isNull()).all()
+    : [];
+  const allMembers = familyIds.length > 0 
+    ? await db.orm.public.FamilyMember.where((m) => m.familyId.in(familyIds)).where((m) => m.deletedAt.isNull()).all()
+    : [];
+  const guestIds = allGuests.map((g) => g.id);
+  const allSpouses = guestIds.length > 0
+    ? await db.orm.public.Spouse.where((s) => s.guestId.in(guestIds)).where((s) => s.deletedAt.isNull()).all()
+    : [];
+  const allTickets = familyIds.length > 0
+    ? await db.orm.public.Ticket.where((t) => t.familyId.in(familyIds)).where((t) => t.deletedAt.isNull()).all()
+    : [];
+  const allGuestTickets = guestIds.length > 0
+    ? await db.orm.public.Ticket.where((t) => t.guestId.in(guestIds)).where((t) => t.deletedAt.isNull()).all()
+    : [];
 
-    const guestIds = guests.map((g) => g.id);
-    const spouses =
-      guestIds.length > 0
-        ? await db.orm.public.Spouse.where((s) => s.guestId.in(guestIds))
-            .where((s) => s.deletedAt.isNull())
-            .all()
-        : [];
+  for (const family of families) {
+    const guests = allGuests.filter(g => g.familyId === family.id);
+    const members = allMembers.filter(m => m.familyId === family.id);
+    
+    const familyGuestIds = new Set(guests.map((g) => g.id));
+    const spouses = allSpouses.filter(s => familyGuestIds.has(s.guestId));
 
     const party = [
       ...guests.map((g) => g.rsvpStatus),
@@ -61,15 +71,9 @@ export async function listFamilies(): Promise<FamilySummary[]> {
       ...members.map((m) => m.rsvpStatus),
     ];
 
-    const tickets = await db.orm.public.Ticket.where({ familyId: family.id })
-      .where((t) => t.deletedAt.isNull())
-      .all();
-    const guestTickets =
-      guestIds.length > 0
-        ? await db.orm.public.Ticket.where((t) => t.guestId.in(guestIds))
-            .where((t) => t.deletedAt.isNull())
-            .all()
-        : [];
+    const tickets = allTickets.filter(t => t.familyId === family.id);
+    const guestTickets = allGuestTickets.filter(t => t.guestId && familyGuestIds.has(t.guestId));
+    
     const invitedFromTickets = [...tickets, ...guestTickets].reduce(
       (sum, t) => sum + (t.numberAllowed ?? 0),
       0,
@@ -328,4 +332,33 @@ export async function getFamilyDetail(familyId: string) {
     members,
     tickets: [...tickets, ...guestTickets],
   };
+}
+
+export async function deleteGuest(id: string, userId: string) {
+  const guest = await db.orm.public.Guest.where({ id })
+    .where((g) => g.deletedAt.isNull())
+    .first();
+  if (!guest) throw new Error("Guest not found.");
+
+  const now = nowInstant();
+  return db.transaction(async (tx) => {
+    await tx.orm.public.Guest.where({ id }).update({ deletedAt: now, updatedAt: now });
+
+    const ticket = await tx.orm.public.Ticket.where({ guestId: id }).where((t) => t.deletedAt.isNull()).first();
+    if (ticket) await tx.orm.public.Ticket.where({ id: ticket.id }).update({ deletedAt: now, updatedAt: now });
+
+    const spouse = await tx.orm.public.Spouse.where({ guestId: id }).where((s) => s.deletedAt.isNull()).first();
+    if (spouse) await tx.orm.public.Spouse.where({ id: spouse.id }).update({ deletedAt: now, updatedAt: now });
+
+    await tx.orm.public.AuditLog.create({
+      id: randomUUID(),
+      userId,
+      action: "GUEST_DELETE",
+      recordType: "Guest",
+      recordId: id,
+      metadata: JSON.stringify({ fullName: guest.fullName }),
+      timestamp: now,
+    });
+    return guest;
+  });
 }
