@@ -15,7 +15,7 @@ export default async function HomePage() {
   if (session.role === "CHECKIN_STAFF") redirect(homePathForRole(session.role));
   if (!canManageGuests(session.role)) redirect("/check-in");
 
-  const { summary, matrix } = await getDashboardAnalytics();
+  const { summary, matrix, recentCheckIns } = await getDashboardAnalytics();
 
-  return <AdminDashboard summary={summary} matrix={matrix} />;
+  return <AdminDashboard summary={summary} matrix={matrix} recentCheckIns={recentCheckIns} />;
 }
