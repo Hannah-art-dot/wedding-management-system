@@ -133,6 +133,35 @@ export function RosterView({ groups }: { groups: RosterGroup[] }) {
           </table>
         </div>
       ))}
+
+      {groups.length > 0 && (() => {
+        const allGuests = groups.flatMap(g => g.guests);
+        const brideTotal = allGuests.filter(g => g.side === Side.BRIDE).reduce((sum, g) => sum + (g.numberAllowed || 0), 0);
+        const groomTotal = allGuests.filter(g => g.side === Side.GROOM).reduce((sum, g) => sum + (g.numberAllowed || 0), 0);
+        const grandTotal = brideTotal + groomTotal;
+
+        return (
+          <div className="mt-8 p-6 flex justify-start max-w-full print:bg-transparent">
+            <div className="flex flex-col text-left leading-relaxed">
+              <h3 className="text-xl font-bold text-stone-900 mb-2 print:text-black">
+                Total Number of Invited Guests
+              </h3>
+              <div>
+                <span className="font-extrabold text-lg text-stone-900 print:text-black">Bride's Side= </span>
+                <span className="font-normal text-lg text-stone-700 print:text-black">{brideTotal} guests</span>
+              </div>
+              <div>
+                <span className="font-extrabold text-lg text-stone-900 print:text-black">Groom's Side= </span>
+                <span className="font-normal text-lg text-stone-700 print:text-black">{groomTotal} guests</span>
+              </div>
+              <div>
+                <span className="font-extrabold text-lg text-stone-900 print:text-black">Total= </span>
+                <span className="font-normal text-lg text-stone-700 print:text-black">{grandTotal} guests</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

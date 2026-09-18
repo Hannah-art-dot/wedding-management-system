@@ -79,6 +79,7 @@ export type GuestReportRow = {
   spouseName: string | null;
   spouseRsvp: RsvpStatusType | null;
   specialNotes: string | null;
+  familyStatus: string | null;
 };
 
 export type FamilyReportRow = {
@@ -152,6 +153,7 @@ type Loaded = {
     attendanceStatus: string;
     numberAttending: number | null;
     specialNotes: string | null;
+    familyStatus: string | null;
   }>;
   spouses: Array<{
     id: string;
@@ -197,6 +199,7 @@ async function loadActiveDataset(): Promise<Loaded> {
         "attendanceStatus",
         "numberAttending",
         "specialNotes",
+        "familyStatus",
       )
       .all(),
     db.orm.public.Spouse.where((s) => s.deletedAt.isNull())
@@ -240,6 +243,7 @@ async function loadActiveDataset(): Promise<Loaded> {
       attendanceStatus: g.attendanceStatus,
       numberAttending: g.numberAttending,
       specialNotes: g.specialNotes,
+      familyStatus: g.familyStatus ?? null,
     })),
     spouses: spouses.map((s) => ({
       id: s.id,
@@ -529,6 +533,7 @@ export async function getGuestReportRows(filter?: {
       spouseName: spouse?.name ?? null,
       spouseRsvp: (spouse?.rsvpStatus as RsvpStatusType) ?? null,
       specialNotes: guest.specialNotes,
+      familyStatus: guest.familyStatus,
     });
   }
 

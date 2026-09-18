@@ -38,7 +38,7 @@ export default async function RosterPage({
       familyName: g.family?.familyName ?? "None",
       side: g.side,
       category: g.category ?? "",
-      familyStatus: g.familyStatus ?? "Individual",
+      familyStatus: g.familyStatus ?? (g.family ? "Family" : "Individual"),
       numberAllowed: g.numberAttending ?? (g.spouse ? 2 : 1),
     };
   });

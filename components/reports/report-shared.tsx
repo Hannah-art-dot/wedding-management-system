@@ -55,8 +55,7 @@ export const GUEST_REPORT_COLUMNS = [
   {
     header: "Family Status",
     value: (r: GuestReportRow) => {
-      // familyStatus not on GuestReportRow yet — render empty for CSV/print
-      return REPORT_EMPTY;
+      return r.familyStatus ?? (r.familyName ? "Family" : "Individual");
     },
   },
   {

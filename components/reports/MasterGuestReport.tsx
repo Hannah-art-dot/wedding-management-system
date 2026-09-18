@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { ReportActions } from "@/components/reports/report-actions";
 import { BackButton } from "@/components/layout/back-button";
 import {
@@ -37,6 +37,26 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
       clearInterval(id);
     };
   }, []);
+
+  const getCount = (r: GuestReportRow) => {
+    const candidates = [r.numberAllowed, r.numberAttending];
+    for (const value of candidates) {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
+        return Math.floor(value);
+      }
+    }
+    return 0;
+  };
+
+  const { brideTotal, groomTotal, grandTotal } = useMemo(() => {
+    const bride = rows.filter((r) => r.side === "BRIDE").reduce((sum, r) => sum + getCount(r), 0);
+    const groom = rows.filter((r) => r.side === "GROOM").reduce((sum, r) => sum + getCount(r), 0);
+    return {
+      brideTotal: bride,
+      groomTotal: groom,
+      grandTotal: bride + groom,
+    };
+  }, [rows]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
@@ -108,6 +128,31 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
                 })
               )}
             </tbody>
+            {rows.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td colSpan={GUEST_REPORT_HEADERS.length} className="px-3 py-6">
+                    <div className="flex flex-col text-left leading-relaxed">
+                      <h3 className="text-xl font-bold text-stone-900 mb-2 print:text-black">
+                        Total Number of Invited Guests
+                      </h3>
+                      <div>
+                        <span className="font-extrabold text-lg text-stone-900 print:text-black">Bride's Side= </span>
+                        <span className="font-normal text-lg text-stone-700 print:text-black">{brideTotal} guests</span>
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-lg text-stone-900 print:text-black">Groom's Side= </span>
+                        <span className="font-normal text-lg text-stone-700 print:text-black">{groomTotal} guests</span>
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-lg text-stone-900 print:text-black">Total= </span>
+                        <span className="font-normal text-lg text-stone-700 print:text-black">{grandTotal} guests</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
