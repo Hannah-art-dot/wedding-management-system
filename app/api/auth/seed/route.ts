@@ -7,8 +7,8 @@ import { nowInstant } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
-export const DEFAULT_ADMIN_PASSWORD = "admin1";
-export const DEFAULT_STAFF_PASSWORD = "staff1";
+export const DEFAULT_ADMIN_PASSWORD = "admin@123";
+export const DEFAULT_STAFF_PASSWORD = "staff@321";
 
 async function resetDefaultUserPasswords(actorUserId: string | null) {
   const now = nowInstant();
@@ -64,8 +64,8 @@ async function resetDefaultUserPasswords(actorUserId: string | null) {
 
 /**
  * Seeds the two primary SRS roles when the user table is empty:
- * - admin / admin1  → ADMIN
- * - staff / staff1  → CHECKIN_STAFF
+ * - admin / admin@123  → ADMIN
+ * - staff / staff@321  → CHECKIN_STAFF
  *
  * If users already exist, POST `{ "resetDefaultPasswords": true }`:
  * - allowed for authenticated ADMIN always
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
           {
             success: false,
             error:
-              'Users already exist. Click “Reset default passwords” on the login page, or POST {"resetDefaultPasswords":true} to set admin/admin1 and staff/staff1.',
+              'Users already exist. Click “Reset default passwords” on the login page, or POST {"resetDefaultPasswords":true} to set admin/admin@123 and staff/staff@321.',
             canResetDefaults: true,
           },
           { status: 409 },
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `Reset passwords for: ${result.updated.join(", ")}. Sign in with admin/admin1 or staff/staff1.`,
+        message: `Reset passwords for: ${result.updated.join(", ")}. Sign in with admin/admin@123 or staff/staff@321.`,
         accounts: result.accounts,
       });
     }
