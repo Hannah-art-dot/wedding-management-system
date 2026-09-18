@@ -21,6 +21,7 @@ export type MappedImportRecord = {
     gender?: "MALE" | "FEMALE" | "OTHER" | "UNSPECIFIED";
     /** CSV NumberAllowed — stored on Guest.numberAttending */
     numberAllowed: number;
+    familyStatus: string;
   };
   spouse?: {
     name: string;
@@ -102,6 +103,9 @@ const HEADER_ALIASES: Record<string, string> = {
   spouse_gender: "spouseGender",
   spousersvp: "spouseRsvp",
   spouse_rsvp: "spouseRsvp",
+  familystatus: "familyStatus",
+  family_status: "familyStatus",
+  status: "familyStatus",
 };
 
 function cellToString(value: unknown): string {
@@ -130,6 +134,14 @@ function normalizeSide(raw: string): Side | null {
   if (raw.trim().toUpperCase() === "GROOM") return Side.GROOM;
   if (raw.trim().toUpperCase() === "NEUTRAL") return Side.NEUTRAL;
   return null;
+}
+
+function normalizeFamilyStatus(raw: string): string {
+  const v = raw.trim().toLowerCase();
+  if (["spouse"].includes(v)) return "Spouse";
+  if (["family"].includes(v)) return "Family";
+  if (["group", "friends"].includes(v)) return "Group";
+  return "Individual";
 }
 
 function normalizeRsvp(raw: string): RsvpStatus | null {
@@ -278,17 +290,10 @@ export function mapSpreadsheetRowsToImportRecords(rows: SpreadsheetRow[]): {
 
     let numberAllowed = 1;
     if (row.numberAllowed != null && row.numberAllowed !== "") {
-      const n = Number(row.numberAllowed);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
-        errors.push({
-          rowIndex,
-          familyName,
-          reason: `Invalid NumberAllowed "${row.numberAllowed}".`,
-        });
-        return;
-      }
-      numberAllowed = n;
+      numberAllowed = parseInt(row.numberAllowed, 10) || 1;
     }
+
+    const familyStatus = normalizeFamilyStatus(row.familyStatus ?? "");
 
     const record: MappedImportRecord = {
       familyName,
@@ -306,6 +311,7 @@ export function mapSpreadsheetRowsToImportRecords(rows: SpreadsheetRow[]): {
         attendanceStatus: "NOT_ARRIVED",
         gender: normalizeGender(row.gender ?? ""),
         numberAllowed,
+        familyStatus,
       },
     };
 

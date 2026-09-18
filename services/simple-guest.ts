@@ -49,6 +49,7 @@ export async function registerSimpleGuest(input: SimpleGuestInput) {
       email: null,
       category: input.category,
       cardStatus: input.cardStatus,
+      familyStatus: input.familyStatus,
       side: input.side,
       rsvpStatus: RsvpStatus.PENDING,
       rsvpReceivedAt: null,

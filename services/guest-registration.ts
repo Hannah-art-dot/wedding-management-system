@@ -362,3 +362,73 @@ export async function deleteGuest(id: string, userId: string) {
     return guest;
   });
 }
+
+export async function updateGuestSimple(
+  id: string,
+  input: {
+    fullName: string;
+    familyName: string;
+    side: Side;
+    category: string;
+    familyStatus: string;
+    numberAllowed: number;
+  },
+  userId: string,
+) {
+  const now = nowInstant();
+
+  return db.transaction(async (tx) => {
+    const guest = await tx.orm.public.Guest.where({ id })
+      .where((g) => g.deletedAt.isNull())
+      .include("ticket", (t) => t.where((t2) => t2.deletedAt.isNull()))
+      .first();
+
+    if (!guest) throw new Error("Guest not found.");
+
+    let familyId = guest.familyId;
+    if (!familyId) {
+       const family = await tx.orm.public.Family.create({
+         id: randomUUID(),
+         familyName: input.familyName.trim(),
+         side: input.side,
+         createdAt: now,
+         updatedAt: now,
+       });
+       familyId = family.id;
+    } else {
+       await tx.orm.public.Family.where({ id: familyId }).update({
+         familyName: input.familyName.trim(),
+         updatedAt: now,
+       });
+    }
+
+    await tx.orm.public.Guest.where({ id }).update({
+      fullName: input.fullName.trim(),
+      side: input.side,
+      category: input.category.trim(),
+      familyStatus: input.familyStatus,
+      familyId,
+      numberAttending: guest.ticket ? guest.numberAttending : input.numberAllowed,
+      updatedAt: now,
+    });
+
+    if (guest.ticket) {
+      await tx.orm.public.Ticket.where({ id: guest.ticket.id }).update({
+        numberAllowed: input.numberAllowed,
+        updatedAt: now,
+      });
+    }
+
+    await tx.orm.public.AuditLog.create({
+      id: randomUUID(),
+      userId,
+      action: "GUEST_UPDATE_SIMPLE",
+      recordType: "Guest",
+      recordId: id,
+      metadata: JSON.stringify({ fullName: input.fullName }),
+      timestamp: now,
+    });
+
+    return guest;
+  });
+}

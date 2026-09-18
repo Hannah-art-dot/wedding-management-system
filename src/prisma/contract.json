@@ -20,6 +20,10 @@
       "model": "Guest",
       "namespace": "public"
     },
+    "importBatch": {
+      "model": "ImportBatch",
+      "namespace": "public"
+    },
     "spouse": {
       "model": "Spouse",
       "namespace": "public"
@@ -695,6 +699,13 @@
                   "kind": "scalar"
                 }
               },
+              "familyStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "fullName": {
                 "nullable": false,
                 "type": {
@@ -717,6 +728,13 @@
               },
               "id": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "importBatchId": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -800,6 +818,21 @@
                   "namespace": "public"
                 }
               },
+              "importBatch": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "importBatchId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ImportBatch",
+                  "namespace": "public"
+                }
+              },
               "spouse": {
                 "cardinality": "1:1",
                 "on": {
@@ -860,6 +893,9 @@
                 "familyId": {
                   "column": "familyId"
                 },
+                "familyStatus": {
+                  "column": "familyStatus"
+                },
                 "fullName": {
                   "column": "fullName"
                 },
@@ -868,6 +904,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "importBatchId": {
+                  "column": "importBatchId"
                 },
                 "numberAttending": {
                   "column": "numberAttending"
@@ -893,6 +932,83 @@
               },
               "namespaceId": "public",
               "table": "guest"
+            }
+          },
+          "ImportBatch": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "fileName": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rowCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "guests": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "importBatchId"
+                  ]
+                },
+                "to": {
+                  "model": "Guest",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "fileName": {
+                  "column": "fileName"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "rowCount": {
+                  "column": "rowCount"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "importBatch"
             }
           },
           "Spouse": {
@@ -1827,6 +1943,15 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "familyStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "Individual"
+                  },
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "fullName": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -1847,6 +1972,11 @@
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
+                },
+                "importBatchId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
                 },
                 "numberAttending": {
                   "codecId": "pg/int4@1",
@@ -1924,6 +2054,23 @@
                     "namespaceId": "public",
                     "tableName": "family"
                   }
+                },
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "importBatchId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "guest"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "importBatch"
+                  }
                 }
               ],
               "indexes": [
@@ -1977,6 +2124,14 @@
                 },
                 {
                   "columns": [
+                    "importBatchId"
+                  ],
+                  "name": "guest_importBatchId_idx_172660b3",
+                  "prefix": "guest_importBatchId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "phone"
                   ],
                   "name": "guest_phone_idx_8db23f45",
@@ -1997,6 +2152,64 @@
                   ],
                   "name": "guest_side_idx_973cebef",
                   "prefix": "guest_side_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "importBatch": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "fileName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "rowCount": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "createdAt"
+                  ],
+                  "name": "importBatch_createdAt_idx_9575dbd7",
+                  "prefix": "importBatch_createdAt_idx",
                   "unique": false
                 }
               ],
@@ -2565,10 +2778,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "b4fbe6137542589e89e3e3ad7d08a3791cc4ee6c278894128e299c04671d9ddf"
+    "storageHash": "c43cfd2cc51700c3550a79567e290043d83cadb19253dbe6359993c58d675c9d"
   },
   "execution": {
-    "executionHash": "32e5a4b1ee54fb12d78cd1e46f23473e64aaf525a0180f27fcded836047945da",
+    "executionHash": "09f409ab0dfdacb86ece6a4cdce9868a146fac082eb43c6833e30b1754d8ed86",
     "mutations": {
       "defaults": [
         {
@@ -2613,6 +2826,17 @@
             "column": "id",
             "namespace": "public",
             "table": "guest"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "importBatch"
           }
         },
         {

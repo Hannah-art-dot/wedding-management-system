@@ -98,6 +98,17 @@ model Family {
   @@index([deletedAt])
 }
 
+model ImportBatch {
+  id         String   @id @default(uuid())
+  fileName   String
+  rowCount   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+  guests     Guest[]
+
+  @@index([createdAt])
+}
+
 model Guest {
   id               String             @id @default(uuid())
   familyId         String?
@@ -112,6 +123,7 @@ model Guest {
   // Invitation card at registration / check-in: "With Card" | "Without Card".
   // Null until explicitly assigned (import leaves blank; Add Guest / Check-In set it).
   cardStatus       card_status?
+  familyStatus     String?            @default("Individual")
   side             side               @default(NEUTRAL)
   rsvpStatus       rsvp_status        @default(PENDING)
   rsvpReceivedAt   DateTime?
@@ -124,6 +136,8 @@ model Guest {
   deletedAt        DateTime?
   spouse           Spouse?
   ticket           Ticket?
+  importBatchId    String?
+  importBatch      ImportBatch?       @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @default(now())
 

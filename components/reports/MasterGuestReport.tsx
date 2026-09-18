@@ -78,7 +78,7 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => {
+                rows.map((r, rowIndex) => {
                   const cells = guestReportCellValues(r);
                   return (
                     <tr
@@ -89,14 +89,18 @@ export function MasterGuestReport({ rows: initialRows }: { rows: GuestReportRow[
                         <td
                           key={col.header}
                           className={
-                            i === 0
-                              ? "px-3 py-2.5 font-medium"
-                              : col.header === "NumberAllowed" || col.header === "Checked In"
-                                ? "px-3 py-2.5 tabular-nums lining-nums"
-                                : "px-3 py-2.5"
+                            col.header === "#"
+                              ? "px-3 py-2.5 tabular-nums lining-nums text-center text-stone-400"
+                              : i === 1
+                                ? "px-3 py-2.5 font-medium"
+                                : col.header === "Number Allowed" || col.header === "Checked In"
+                                  ? "px-3 py-2.5 tabular-nums lining-nums"
+                                  : col.header === "Card Status"
+                                    ? "px-3 py-2.5 text-stone-300"
+                                    : "px-3 py-2.5"
                           }
                         >
-                          {cells[i]}
+                          {col.header === "#" ? rowIndex + 1 : col.header === "Card Status" ? "_____" : cells[i]}
                         </td>
                       ))}
                     </tr>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
-import { Check, Loader2, Search, Ticket, TicketX, Trash2 } from "lucide-react";
+import { Check, Loader2, Search, Ticket, TicketX, Trash2, Pencil, X } from "lucide-react";
 import type { CheckInSearchResult } from "@/services/check-in";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,8 @@ export function CheckInClient() {
   const [pendingDelete, setPendingDelete] = useState<CheckInSearchResult | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [editingGuest, setEditingGuest] = useState<CheckInSearchResult | null>(null);
+  const [busyEdit, setBusyEdit] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
@@ -199,22 +201,34 @@ export function CheckInClient() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:py-8">
       <div className="space-y-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
-          <Input
+        <div className="relative w-full max-w-xl h-12 bg-white rounded-xl border border-stone-300 shadow-sm transition-all focus-within:border-stone-600 focus-within:ring-4 focus-within:ring-stone-200/60 focus-within:shadow-md">
+          <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-stone-400" />
+          <input
             ref={inputRef}
             type="search"
             inputMode="search"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="Name or phone"
+            placeholder="Search guest by name..."
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="h-14 rounded-xl border-stone-200/80 bg-white/90 pl-12 text-lg shadow-sm transition-all duration-200 md:text-lg"
+            className="h-full pl-11 pr-10 text-base text-stone-900 placeholder:text-stone-400 focus:outline-none bg-transparent w-full rounded-xl [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
           />
-          {searching ? (
-            <Loader2 className="absolute top-1/2 right-4 size-5 -translate-y-1/2 animate-spin text-accent" />
+          {query.trim().length > 0 && !searching ? (
+            <button
+              type="button"
+              className="absolute top-1/2 right-4 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-600 transition-colors focus:outline-none"
+              onClick={() => {
+                onQueryChange("");
+                inputRef.current?.focus();
+              }}
+            >
+              <span className="sr-only">Clear</span>
+              <X className="size-4" />
+            </button>
+          ) : searching ? (
+            <Loader2 className="absolute top-1/2 right-4 size-5 -translate-y-1/2 animate-spin text-stone-400" />
           ) : null}
         </div>
 
@@ -276,6 +290,10 @@ export function CheckInClient() {
                       <div>
                         <dt className="text-muted-foreground">Category</dt>
                         <dd className="font-medium">{guest.category?.trim() || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Family Status</dt>
+                        <dd className="font-medium">{guest.familyStatus || "—"}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Number Allowed</dt>
@@ -375,21 +393,34 @@ export function CheckInClient() {
                       </Button>
                     )}
                     {isAdmin ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={deleting || busy}
-                        className="text-destructive"
-                        onClick={() => requestDelete(guest)}
-                      >
-                        {deleting ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                        Delete Guest
-                      </Button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={deleting || busy}
+                          className="flex-1 sm:flex-none border-[#d8c3a5] text-[#8e7b61] hover:bg-[#eae0d5] hover:text-[#5e4b31]"
+                          onClick={() => setEditingGuest(guest)}
+                        >
+                          <Pencil className="size-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={deleting || busy}
+                          className="flex-1 sm:flex-none text-destructive"
+                          onClick={() => requestDelete(guest)}
+                        >
+                          {deleting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                          Delete
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                 </CardContent>
@@ -448,6 +479,148 @@ export function CheckInClient() {
           </div>
         </div>
       ) : null}
+
+      {editingGuest ? (
+        <EditGuestModal
+          guest={editingGuest}
+          onClose={() => setEditingGuest(null)}
+          onSave={async (updates) => {
+            setBusyEdit(true);
+            try {
+              const res = await fetch(`/api/guests/${editingGuest.guestId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+              });
+              const data = await res.json();
+              if (!res.ok || !data.success) {
+                setBanner({ kind: "destructive", text: data.error ?? "Failed to update guest." });
+                return;
+              }
+              setResults((prev) =>
+                prev.map((r) => (r.guestId === editingGuest.guestId ? { ...r, ...updates } : r)),
+              );
+              setBanner({ kind: "success", text: "Guest updated." });
+              setEditingGuest(null);
+            } catch {
+              setBanner({ kind: "destructive", text: "Network error." });
+            } finally {
+              setBusyEdit(false);
+            }
+          }}
+          busy={busyEdit}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function EditGuestModal({
+  guest,
+  onClose,
+  onSave,
+  busy,
+}: {
+  guest: CheckInSearchResult;
+  onClose: () => void;
+  onSave: (updates: any) => void;
+  busy: boolean;
+}) {
+  const [fullName, setFullName] = useState(guest.fullName);
+  const [familyName, setFamilyName] = useState(guest.familyName || "");
+  const [side, setSide] = useState(guest.side);
+  const [category, setCategory] = useState(guest.category || "Brides_Family");
+  const [familyStatus, setFamilyStatus] = useState(guest.familyStatus || "Individual");
+  const [numberAllowed, setNumberAllowed] = useState(String(guest.numberAllowed));
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-stone-200/60 bg-white/90 p-5 shadow-xl backdrop-blur-md">
+        <h3 className="font-display text-xl font-semibold tracking-tight">Edit Guest</h3>
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="text-sm font-medium text-stone-700">Full Name</label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700">Family Name</label>
+            <Input value={familyName} onChange={(e) => setFamilyName(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700">Side</label>
+            <select
+              value={side}
+              onChange={(e) => setSide(e.target.value as any)}
+              className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-950 focus-visible:ring-offset-2"
+            >
+              <option value="BRIDE">BRIDE</option>
+              <option value="GROOM">GROOM</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-950 focus-visible:ring-offset-2"
+            >
+              <option value="Brides_Family">Brides_Family</option>
+              <option value="Grooms_Family">Grooms_Family</option>
+              <option value="Brides_Friend">Brides_Friend</option>
+              <option value="Grooms_Friend">Grooms_Friend</option>
+              <option value="VIP Family">VIP Family</option>
+              <option value="VVIP Family">VVIP Family</option>
+              <option value="Crew">Crew</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700">Family Status</label>
+            <select
+              value={familyStatus}
+              onChange={(e) => setFamilyStatus(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-950 focus-visible:ring-offset-2"
+            >
+              <option value="Individual">Individual</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Family">Family</option>
+              <option value="Group">Group</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700">Number Allowed</label>
+            <Input
+              type="number"
+              min="1"
+              value={numberAllowed}
+              onChange={(e) => setNumberAllowed(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button
+            variant="champagne"
+            disabled={busy}
+            onClick={() => {
+              onSave({
+                fullName,
+                familyName,
+                side,
+                category,
+                familyStatus,
+                numberAllowed: parseInt(numberAllowed, 10) || 1,
+              });
+            }}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+            Save
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

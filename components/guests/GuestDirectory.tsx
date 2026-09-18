@@ -30,7 +30,7 @@ export function GuestDirectory({ results, query, side }: GuestDirectoryProps) {
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Button asChild variant="champagne" className="mt-2 w-full sm:mt-0 sm:w-auto">
-            <Link href="/guests/new">Register guest</Link>
+            <Link href="/guests">Register guest</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/guests/import">Import CSV / Excel</Link>

@@ -457,6 +457,9 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
               <th className="py-3 px-3 font-medium">Guest Name</th>
               <th className="py-3 px-3 font-medium">Family Name</th>
               <th className="py-3 px-3 font-medium">Side</th>
+              <th className="py-3 px-3 font-medium">Category</th>
+              <th className="py-3 px-3 font-medium">Family Status</th>
+              <th className="py-3 px-3 font-medium">Number Allowed</th>
               <th className="py-3 px-3 font-medium">Time</th>
               <th className="py-3 px-3 font-medium text-right">Detail</th>
             </tr>
@@ -464,7 +467,7 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
           <tbody className="divide-y divide-stone-50 text-sm">
             {displayedCheckIns.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-sm text-stone-400">
+                <td colSpan={8} className="py-8 text-center text-sm text-stone-400">
                   No check-ins recorded yet.
                 </td>
               </tr>
@@ -486,6 +489,9 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
                         {item.side}
                       </span>
                     </td>
+                    <td className="py-4 px-3 text-stone-600">{item.category ?? "—"}</td>
+                    <td className="py-4 px-3 text-stone-600">{item.familyStatus ?? "—"}</td>
+                    <td className="py-4 px-3 text-stone-600">{item.numberAllowed}</td>
                     <td className="py-4 px-3 text-stone-500 tabular-nums">
                       {new Date(item.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                     </td>
@@ -508,7 +514,7 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
       <div className="mt-6 flex items-center justify-between pt-4 border-t border-stone-100 text-xs text-stone-500">
         <span>Showing all {filteredCheckIns.length} check-in entries</span>
         <Link href="/reports" className="font-semibold text-stone-800 hover:underline">
-          View All Roster Entries →
+          View All Check-Ins →
         </Link>
       </div>
     </div>
@@ -557,11 +563,35 @@ export function AdminDashboard({
       <PieMotionStyles />
 
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <header className="animate-fade-up space-y-1">
-          <p className="text-xs font-medium tracking-[0.28em] text-stone-500 uppercase">Overview</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-wide text-stone-800 sm:text-4xl">
-            Wedding Desk
-          </h1>
+        <header className="animate-fade-up flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium tracking-[0.28em] text-stone-500 uppercase">Overview</p>
+            <h1 className="font-serif text-3xl font-semibold tracking-wide text-stone-800 sm:text-4xl">
+              Wedding Desk
+            </h1>
+          </div>
+          <Link
+            href="/reports/roster"
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/90 px-3.5 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-50"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 9V2h12v7" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect width="12" height="8" x="6" y="14" />
+            </svg>
+            Print Guest List
+          </Link>
         </header>
 
         <section className="animate-fade-up animate-delay-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

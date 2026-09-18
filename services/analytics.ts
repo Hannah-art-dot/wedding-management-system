@@ -26,6 +26,9 @@ export type CheckInEntry = {
   guestName: string;
   familyName: string | null;
   side: "Bride" | "Groom" | "General";
+  category: string | null;
+  familyStatus: string | null;
+  numberAllowed: number;
   time: string;
 };
 
@@ -447,6 +450,9 @@ export async function getDashboardAnalytics(): Promise<{
     guestName: g.fullName,
     familyName: g.family?.familyName ?? null,
     side: g.side === Side.BRIDE ? "Bride" : g.side === Side.GROOM ? "Groom" : "General",
+    category: g.category ?? null,
+    familyStatus: g.familyStatus ?? null,
+    numberAllowed: g.numberAttending ?? 1,
     time: g.checkedInAt ? g.checkedInAt.toString() : new Date().toISOString(),
   }));
 

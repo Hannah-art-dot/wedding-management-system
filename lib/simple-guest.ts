@@ -39,6 +39,7 @@ export const simpleGuestSchema = z.object({
     .transform((v) => (v ? v : undefined)),
   side: z.enum([Side.BRIDE, Side.GROOM]),
   category: z.enum(PRE_INVITED_CATEGORIES),
+  familyStatus: z.enum(["Individual", "Spouse", "Family", "Group"]).default("Individual"),
   numberAllowed: z.coerce.number().int().min(1),
   cardStatus: z.enum(CARD_STATUS_VALUES).default(CardStatus.WITH_CARD),
 });

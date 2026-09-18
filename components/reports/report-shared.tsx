@@ -29,12 +29,12 @@ function resolveReportNumberAllowed(r: GuestReportRow): string {
  */
 export const GUEST_REPORT_COLUMNS = [
   {
-    header: "Full Name",
-    value: (r: GuestReportRow) => r.fullName || REPORT_EMPTY,
+    header: "#",
+    value: (_r: GuestReportRow, _index?: number) => REPORT_EMPTY,
   },
   {
-    header: "Phone",
-    value: (r: GuestReportRow) => r.phone?.trim() || REPORT_EMPTY,
+    header: "Full Name",
+    value: (r: GuestReportRow) => r.fullName || REPORT_EMPTY,
   },
   {
     header: "Family Name",
@@ -49,15 +49,19 @@ export const GUEST_REPORT_COLUMNS = [
     value: (r: GuestReportRow) => r.category?.trim() || REPORT_EMPTY,
   },
   {
-    header: "Card Status",
+    header: "Number Allowed",
+    value: (r: GuestReportRow) => resolveReportNumberAllowed(r),
+  },
+  {
+    header: "Family Status",
     value: (r: GuestReportRow) => {
-      const status = r.cardStatus?.trim();
-      return status ? status : REPORT_EMPTY;
+      // familyStatus not on GuestReportRow yet — render empty for CSV/print
+      return REPORT_EMPTY;
     },
   },
   {
-    header: "NumberAllowed",
-    value: (r: GuestReportRow) => resolveReportNumberAllowed(r),
+    header: "Card Status",
+    value: (_r: GuestReportRow) => "",
   },
   {
     header: "Checked In",

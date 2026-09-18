@@ -57,6 +57,7 @@ const guestSchema = z.object({
   rsvpStatus: rsvpEnum,
   attendanceStatus: attendanceEnum,
   numberAllowed: z.coerce.number().int().min(1).default(1),
+  familyStatus: z.string().trim().optional(),
 });
 
 const spouseSchema = z.object({
@@ -361,105 +362,121 @@ export async function POST(req: NextRequest) {
 
   try {
     await db.transaction(async (tx) => {
-      for (const { record } of filteredValid) {
-        const family = await tx.orm.public.Family.create({
-          id: randomUUID(),
-          familyName: record.familyName,
-          side: record.side,
-          contactPerson: record.contactPerson ?? null,
-          phone: record.familyPhone ?? null,
-          notes: record.notes ?? null,
-          deletedAt: null,
-          createdAt: nowInstant(),
-          updatedAt: nowInstant(),
-        });
-        stats.familiesCreated += 1;
+      const batchId = randomUUID();
+      await tx.orm.public.ImportBatch.create({
+        id: batchId,
+        fileName: fileName ?? "unknown",
+        rowCount: filteredValid.length,
+        createdAt: nowInstant(),
+        updatedAt: nowInstant(),
+      });
 
-        const guest = await tx.orm.public.Guest.create({
-          id: randomUUID(),
-          familyId: family.id,
-          fullName: record.guest.fullName,
-          gender: (record.guest.gender as Gender | undefined) ?? null,
-          phone: record.guest.phone ?? null,
-          email: record.guest.email ?? null,
-          category: record.guest.category ?? null,
-          cardStatus: null,
-          side: record.guest.side,
-          rsvpStatus: record.guest.rsvpStatus,
-          rsvpReceivedAt: null,
-          numberAttending:
-            record.guest.numberAllowed ??
-            record.ticket?.numberAllowed ??
-            1,
-          attendanceStatus: record.guest.attendanceStatus,
-          checkedInAt: null,
-          checkedInByUserId: null,
-          specialNotes: null,
-          deletedAt: null,
-          createdAt: nowInstant(),
-          updatedAt: nowInstant(),
-        });
-        stats.guestsCreated += 1;
-
-        if (record.spouse) {
-          await tx.orm.public.Spouse.create({
+      for (const { record, rowIndex } of filteredValid) {
+        try {
+          const family = await tx.orm.public.Family.create({
             id: randomUUID(),
-            guestId: guest.id,
-            name: record.spouse.name,
-            gender: (record.spouse.gender as Gender | undefined) ?? null,
-            rsvpStatus: record.spouse.rsvpStatus,
-            rsvpReceivedAt: null,
-            ticketStatus: TicketStatus.NOT_ISSUED,
-            attendanceStatus: record.spouse.attendanceStatus,
-            checkedInAt: null,
-            checkedInByUserId: null,
+            familyName: record.familyName,
+            side: record.side,
+            contactPerson: record.contactPerson ?? null,
+            phone: record.familyPhone ?? null,
+            notes: record.notes ?? null,
             deletedAt: null,
             createdAt: nowInstant(),
             updatedAt: nowInstant(),
           });
-          stats.spousesCreated += 1;
-        }
+          stats.familiesCreated += 1;
 
-        for (const m of record.familyMembers) {
-          await tx.orm.public.FamilyMember.create({
+          const guest = await tx.orm.public.Guest.create({
             id: randomUUID(),
             familyId: family.id,
-            name: m.name,
-            relationship: m.relationship,
-            age: m.age ?? null,
-            rsvpStatus: m.rsvpStatus,
+            importBatchId: batchId,
+            fullName: record.guest.fullName,
+            gender: (record.guest.gender as Gender | undefined) ?? null,
+            phone: record.guest.phone ?? null,
+            email: record.guest.email ?? null,
+            category: record.guest.category ?? null,
+            cardStatus: null,
+            side: record.guest.side,
+            rsvpStatus: record.guest.rsvpStatus,
             rsvpReceivedAt: null,
-            attendanceStatus: m.attendanceStatus,
+            numberAttending:
+              record.guest.numberAllowed ??
+              record.ticket?.numberAllowed ??
+              1,
+            attendanceStatus: record.guest.attendanceStatus,
+            familyStatus: record.guest.familyStatus ?? "Individual",
             checkedInAt: null,
             checkedInByUserId: null,
+            specialNotes: null,
             deletedAt: null,
             createdAt: nowInstant(),
             updatedAt: nowInstant(),
           });
-          stats.familyMembersCreated += 1;
-        }
+          stats.guestsCreated += 1;
 
-        if (record.ticket) {
-          const assignToFamily = record.ticket.assignTo === "family";
-          await tx.orm.public.Ticket.create({
-            id: randomUUID(),
-            ticketNumber: record.ticket.ticketNumber,
-            numberAllowed: record.ticket.numberAllowed,
-            numberUsed: 0,
-            status: record.ticket.status,
-            issueDate: record.ticket.issueDate
-              ? toInstant(record.ticket.issueDate)
-              : null,
-            usedDate: record.ticket.usedDate
-              ? toInstant(record.ticket.usedDate)
-              : null,
-            familyId: assignToFamily ? family.id : null,
-            guestId: assignToFamily ? null : guest.id,
-            deletedAt: null,
-            createdAt: nowInstant(),
-            updatedAt: nowInstant(),
-          });
-          stats.ticketsCreated += 1;
+          if (record.spouse) {
+            await tx.orm.public.Spouse.create({
+              id: randomUUID(),
+              guestId: guest.id,
+              name: record.spouse.name,
+              gender: (record.spouse.gender as Gender | undefined) ?? null,
+              rsvpStatus: record.spouse.rsvpStatus,
+              rsvpReceivedAt: null,
+              ticketStatus: TicketStatus.NOT_ISSUED,
+              attendanceStatus: record.spouse.attendanceStatus,
+              checkedInAt: null,
+              checkedInByUserId: null,
+              deletedAt: null,
+              createdAt: nowInstant(),
+              updatedAt: nowInstant(),
+            });
+            stats.spousesCreated += 1;
+          }
+
+          for (const m of record.familyMembers) {
+            await tx.orm.public.FamilyMember.create({
+              id: randomUUID(),
+              familyId: family.id,
+              name: m.name,
+              relationship: m.relationship,
+              age: m.age ?? null,
+              rsvpStatus: m.rsvpStatus,
+              rsvpReceivedAt: null,
+              attendanceStatus: m.attendanceStatus,
+              checkedInAt: null,
+              checkedInByUserId: null,
+              deletedAt: null,
+              createdAt: nowInstant(),
+              updatedAt: nowInstant(),
+            });
+            stats.familyMembersCreated += 1;
+          }
+
+          if (record.ticket) {
+            const assignToFamily = record.ticket.assignTo === "family";
+            await tx.orm.public.Ticket.create({
+              id: randomUUID(),
+              ticketNumber: record.ticket.ticketNumber,
+              numberAllowed: record.ticket.numberAllowed,
+              numberUsed: 0,
+              status: record.ticket.status,
+              issueDate: record.ticket.issueDate
+                ? toInstant(record.ticket.issueDate)
+                : null,
+              usedDate: record.ticket.usedDate
+                ? toInstant(record.ticket.usedDate)
+                : null,
+              familyId: assignToFamily ? family.id : null,
+              guestId: assignToFamily ? null : guest.id,
+              deletedAt: null,
+              createdAt: nowInstant(),
+              updatedAt: nowInstant(),
+            });
+            stats.ticketsCreated += 1;
+          }
+        } catch (e) {
+          const m = e instanceof Error ? e.message : String(e);
+          throw new Error(`Row ${rowIndex} (${record.familyName}) failed: ${m}`);
         }
       }
 
@@ -488,7 +505,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Import aborted: a unique constraint was violated during the transaction.",
+          error: `Import aborted: a unique constraint was violated during the transaction. ${message}`,
           detail: message,
         },
         { status: 409 },
@@ -497,7 +514,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Import transaction failed and was fully rolled back. No rows were written.",
+        error: `Import transaction failed and was fully rolled back. No rows were written. Reason: ${message}`,
       },
       { status: 500 },
     );

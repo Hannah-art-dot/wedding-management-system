@@ -27,6 +27,7 @@ export function GuestRegistrationForm() {
   const [familyName, setFamilyName] = useState("");
   const [side, setSide] = useState<"BRIDE" | "GROOM">(Side.BRIDE);
   const [category, setCategory] = useState<PreInvitedCategory>("Brides_Family");
+  const [familyStatus, setFamilyStatus] = useState("Individual");
   const [numberAllowed, setNumberAllowed] = useState("1");
   const [cardStatus, setCardStatus] = useState<CardStatusValue>(CardStatus.WITH_CARD);
 
@@ -53,6 +54,7 @@ export function GuestRegistrationForm() {
           familyName,
           side,
           category,
+          familyStatus,
           numberAllowed: Number(numberAllowed) || 1,
           cardStatus,
         }),
@@ -67,6 +69,7 @@ export function GuestRegistrationForm() {
       setFamilyName("");
       setSide(Side.BRIDE);
       setCategory("Brides_Family");
+      setFamilyStatus("Individual");
       setNumberAllowed("1");
       setCardStatus(CardStatus.WITH_CARD);
       setSaved(true);
@@ -83,7 +86,7 @@ export function GuestRegistrationForm() {
         <BackButton href="/" />
       </div>
 
-      <div className="rounded-2xl border border-stone-200/80 bg-white/75 p-5 shadow-sm backdrop-blur-sm sm:p-7">
+      <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-7">
         <form className="space-y-4" onSubmit={(e) => void onSubmit(e)}>
           <div className="space-y-1.5">
             <Label htmlFor="fullName">Full Name</Label>
@@ -152,6 +155,20 @@ export function GuestRegistrationForm() {
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="familyStatus">Family Status</Label>
+            <Select
+              id="familyStatus"
+              value={familyStatus}
+              onChange={(e) => setFamilyStatus(e.target.value)}
+            >
+              <option value="Individual">Individual</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Family">Family</option>
+              <option value="Group">Group</option>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="numberAllowed">NumberAllowed</Label>
             <Input
               id="numberAllowed"
@@ -195,10 +212,10 @@ export function GuestRegistrationForm() {
             </div>
           ) : null}
 
-          <Button type="submit" size="lg" variant="champagne" disabled={busy} className="w-full">
+          <Button type="submit" size="lg" disabled={busy} className="w-full rounded-md bg-[#bfa07a] text-white hover:bg-[#a88a65]">
             {busy ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Saving…
               </>
             ) : (
@@ -206,7 +223,7 @@ export function GuestRegistrationForm() {
             )}
           </Button>
 
-          <Button asChild size="lg" variant="outline" className="w-full">
+          <Button asChild size="lg" variant="outline" className="w-full bg-white border border-stone-200 hover:bg-stone-50">
             <Link href="/guests/import">Import CSV / Excel</Link>
           </Button>
         </form>

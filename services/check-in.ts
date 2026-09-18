@@ -21,6 +21,7 @@ export type CheckInSearchResult = {
   phone: string | null;
   familyName: string | null;
   category: string | null;
+  familyStatus: string | null;
   side: SideType;
   cardStatus: CardStatusType | null;
   rsvpStatus: RsvpStatus;
@@ -81,6 +82,7 @@ type GuestRow = {
   fullName: string;
   phone: string | null;
   category: string | null;
+  familyStatus: string | null;
   side: SideType;
   cardStatus: CardStatusType | null;
   numberAttending: number | null;
@@ -141,6 +143,7 @@ function toSearchResult(
     phone: guest.phone,
     familyName: guest.family?.familyName ?? null,
     category: guest.category?.trim() || null,
+    familyStatus: guest.familyStatus ?? null,
     side: guest.side,
     cardStatus: guest.cardStatus ?? null,
     rsvpStatus: guest.rsvpStatus,
@@ -199,6 +202,7 @@ async function loadGuestsByIds(ids: string[]): Promise<GuestRow[]> {
       "fullName",
       "phone",
       "category",
+      "familyStatus",
       "side",
       "cardStatus",
       "numberAttending",
@@ -303,11 +307,16 @@ export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchR
     : patternFor(tokens[0] ?? query);
   const phonePattern = patternFor(query);
 
-  const [byNameLead, byPhone] = await Promise.all([
+  const [byNameLead, familiesLead, byPhone] = await Promise.all([
     db.orm.public.Guest.where((g) => g.fullName.ilike(leadPattern))
       .where((g) => g.deletedAt.isNull())
       .select("id", "fullName", "phone")
       .limit(resultLimit * 4)
+      .all(),
+    db.orm.public.Family.where((f) => f.familyName.ilike(leadPattern))
+      .where((f) => f.deletedAt.isNull())
+      .select("id")
+      .limit(resultLimit)
       .all(),
     isNamePrefixQuery
       ? Promise.resolve([] as Array<{ id: string; fullName: string; phone: string | null }>)
@@ -318,6 +327,15 @@ export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchR
           .all(),
   ]);
 
+  let byFamilyGuests: Array<{ id: string; fullName: string; phone: string | null }> = [];
+  if (familiesLead.length > 0) {
+    byFamilyGuests = await db.orm.public.Guest.where((g) => g.familyId.in(familiesLead.map(f => f.id)))
+      .where((g) => g.deletedAt.isNull())
+      .select("id", "fullName", "phone")
+      .limit(resultLimit * 4)
+      .all() as any;
+  }
+
   const idSet = new Set<string>();
 
   for (const row of byNameLead) {
@@ -327,6 +345,10 @@ export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchR
       continue;
     }
     if (tokens.every((t) => nameLower.includes(t.toLowerCase()))) idSet.add(row.id);
+  }
+
+  for (const row of byFamilyGuests) {
+    idSet.add(row.id);
   }
 
   for (const row of byPhone) {
@@ -348,8 +370,9 @@ export async function searchForCheckIn(rawQuery: string): Promise<CheckInSearchR
 
   const filtered = visible.filter((g) => {
     const nameLower = g.fullName.toLowerCase();
-    if (isNamePrefixQuery) return nameLower.startsWith(queryLower);
-    if (tokens.every((t) => nameLower.includes(t.toLowerCase()))) return true;
+    const familyNameLower = g.family?.familyName?.toLowerCase() ?? "";
+    if (isNamePrefixQuery) return nameLower.startsWith(queryLower) || familyNameLower.startsWith(queryLower);
+    if (tokens.every((t) => nameLower.includes(t.toLowerCase()) || familyNameLower.includes(t.toLowerCase()))) return true;
     const phone = g.phone?.trim() ?? "";
     if (!phone) return false;
     const phoneLower = phone.toLowerCase();
@@ -384,6 +407,7 @@ export async function checkInGuest(
         "fullName",
         "phone",
         "category",
+        "familyStatus",
         "side",
         "cardStatus",
         "numberAttending",

@@ -1,0 +1,245 @@
+[
+  {
+    "id": "table.importBatch",
+    "label": "Create table \"importBatch\"",
+    "summary": "Creates table \"importBatch\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "importBatch"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"importBatch\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"importBatch\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"importBatch\"",
+        "sql": "CREATE TABLE \"public\".\"importBatch\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"fileName\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"rowCount\" int4 DEFAULT 0 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"importBatch\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"importBatch\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.familyStatus",
+    "label": "Add column \"familyStatus\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "familyStatus",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"familyStatus\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "familyStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"familyStatus\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"familyStatus\" text DEFAULT 'Individual'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"familyStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "familyStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.guest.importBatchId",
+    "label": "Add column \"importBatchId\" to \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "importBatchId",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"importBatchId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "importBatchId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"importBatchId\"",
+        "sql": "ALTER TABLE \"public\".\"guest\" ADD COLUMN \"importBatchId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"importBatchId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "guest",
+          "importBatchId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.guest.guest_importBatchId_idx_172660b3",
+    "label": "Create index \"guest_importBatchId_idx_172660b3\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "guest_importBatchId_idx_172660b3",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"guest_importBatchId_idx_172660b3\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_importBatchId_idx_172660b3\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"guest_importBatchId_idx_172660b3\"",
+        "sql": "CREATE INDEX \"guest_importBatchId_idx_172660b3\" ON \"public\".\"guest\" (\"importBatchId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"guest_importBatchId_idx_172660b3\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"guest_importBatchId_idx_172660b3\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.importBatch.importBatch_createdAt_idx_9575dbd7",
+    "label": "Create index \"importBatch_createdAt_idx_9575dbd7\" on \"importBatch\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "importBatch_createdAt_idx_9575dbd7",
+        "table": "importBatch"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"importBatch_createdAt_idx_9575dbd7\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"importBatch_createdAt_idx_9575dbd7\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"importBatch_createdAt_idx_9575dbd7\"",
+        "sql": "CREATE INDEX \"importBatch_createdAt_idx_9575dbd7\" ON \"public\".\"importBatch\" (\"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"importBatch_createdAt_idx_9575dbd7\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"importBatch_createdAt_idx_9575dbd7\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.guest.guest_importBatchId_fkey",
+    "label": "Add foreign key \"guest_importBatchId_fkey\" on \"guest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "guest_importBatchId_fkey",
+        "table": "guest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"guest_importBatchId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_importBatchId_fkey",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"guest_importBatchId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"guest\"\nADD CONSTRAINT \"guest_importBatchId_fkey\"\nFOREIGN KEY (\"importBatchId\")\nREFERENCES \"public\".\"importBatch\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"guest_importBatchId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "guest_importBatchId_fkey",
+          "public",
+          "\"public\".\"guest\""
+        ]
+      }
+    ]
+  }
+]
