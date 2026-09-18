@@ -493,7 +493,7 @@ function RecentCheckInsTable({ checkIns }: { checkIns: CheckInEntry[] }) {
                     <td className="py-4 px-3 text-stone-600">{item.familyStatus ?? "—"}</td>
                     <td className="py-4 px-3 text-stone-600">{item.numberAllowed}</td>
                     <td className="py-4 px-3 text-stone-500 tabular-nums">
-                      {new Date(item.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </td>
                     <td className="py-4 px-3 text-right">
                       <Link

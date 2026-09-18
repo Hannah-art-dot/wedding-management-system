@@ -362,12 +362,16 @@ export async function getDashboardAnalytics(): Promise<{
     }
   }
 
-  const guestsWithOwnTicket = new Set(
-    leanTickets.map((t) => t.guestId).filter((id): id is string => Boolean(id)),
+  const ticketsByGuest = new Map(
+    leanTickets.filter((t) => t.guestId).map((t) => [t.guestId as string, t]),
   );
-  const familiesWithTicket = new Set(
-    leanTickets.map((t) => t.familyId).filter((id): id is string => Boolean(id)),
-  );
+  const ticketsByFamily = new Map<string, typeof leanTickets[0][]>();
+  for (const t of leanTickets) {
+    if (!t.familyId) continue;
+    const list = ticketsByFamily.get(t.familyId) ?? [];
+    list.push(t);
+    ticketsByFamily.set(t.familyId, list);
+  }
 
   // Unique guest rows only — never inflate from ticket seats / numberAttending / joins.
   let totalInvited = 0;
@@ -376,26 +380,33 @@ export async function getDashboardAnalytics(): Promise<{
   let arrived = 0;
 
   for (const guest of leanGuests) {
-    const hasOwn = guestsWithOwnTicket.has(guest.id);
-    const hasFamily =
-      guest.familyId != null && familiesWithTicket.has(guest.familyId);
-    const hasTicket = hasOwn || hasFamily;
+    const ticket = ticketsByGuest.get(guest.id) ?? (guest.familyId ? ticketsByFamily.get(guest.familyId)?.[0] : null);
+    const hasTicket = Boolean(ticket);
     const key = bucketSide(String(guest.side));
 
-    totalInvited += 1;
-    sideBuckets[key].invited += 1;
+    let headcount = 0;
+    const candidates = [ticket?.numberAllowed, guest.numberAttending];
+    for (const value of candidates) {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
+        headcount = Math.floor(value);
+        break;
+      }
+    }
+
+    totalInvited += headcount;
+    sideBuckets[key].invited += headcount;
 
     if (hasTicket) {
-      withTickets += 1;
-      sideBuckets[key].withTickets += 1;
+      withTickets += headcount;
+      sideBuckets[key].withTickets += headcount;
     } else {
-      withoutTickets += 1;
-      sideBuckets[key].withoutTickets += 1;
+      withoutTickets += headcount;
+      sideBuckets[key].withoutTickets += headcount;
     }
 
     if (guest.attendanceStatus === AttendanceStatus.ARRIVED) {
-      arrived += 1;
-      sideBuckets[key].arrived += 1;
+      arrived += headcount;
+      sideBuckets[key].arrived += headcount;
     }
   }
 
@@ -449,16 +460,28 @@ export async function getDashboardAnalytics(): Promise<{
     .orderBy((g) => g.checkedInAt.desc())
     .all();
 
-  const recentCheckIns: CheckInEntry[] = recentGuests.map((g) => ({
-    id: g.id,
-    guestName: g.fullName,
-    familyName: g.family?.familyName ?? null,
-    side: g.side === Side.BRIDE ? "Bride" : g.side === Side.GROOM ? "Groom" : "General",
-    category: g.category ?? null,
-    familyStatus: g.familyStatus ?? null,
-    numberAllowed: g.numberAttending ?? 1,
-    time: g.checkedInAt ? g.checkedInAt.toString() : new Date().toISOString(),
-  }));
+  const recentCheckIns: CheckInEntry[] = recentGuests.map((g) => {
+    const ticket = ticketsByGuest.get(g.id) ?? (g.familyId ? ticketsByFamily.get(g.familyId)?.[0] : null);
+    let headcount = 0;
+    const candidates = [ticket?.numberAllowed, g.numberAttending];
+    for (const value of candidates) {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
+        headcount = Math.floor(value);
+        break;
+      }
+    }
+    
+    return {
+      id: g.id,
+      guestName: g.fullName,
+      familyName: g.family?.familyName ?? null,
+      side: g.side === Side.BRIDE ? "Bride" : g.side === Side.GROOM ? "Groom" : "General",
+      category: g.category ?? "General",
+      familyStatus: g.familyStatus ?? (g.family ? "Family" : "Individual"),
+      numberAllowed: headcount,
+      time: g.checkedInAt ? g.checkedInAt.toString() : new Date().toISOString(),
+    };
+  });
 
   return { summary, matrix, recentCheckIns };
 }

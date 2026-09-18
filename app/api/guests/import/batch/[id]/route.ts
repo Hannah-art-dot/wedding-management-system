@@ -81,18 +81,38 @@ export async function DELETE(
 ) {
   try {
     const p = await params;
+    
     if (p.id === "legacy-batch") {
-      const plan = db.sql.public.guest.delete().where((f, fns) => fns.eq(f.importBatchId, null)).build();
-      await db.runtime().execute(plan);
+      await db.transaction(async (tx) => {
+        const guests = await tx.orm.public.Guest.where((g) => g.importBatchId.isNull()).select("id").all();
+        const guestIds = guests.map((g) => g.id as string);
+        
+        if (guestIds.length > 0) {
+          const ticketPlan = tx.sql.public.ticket.delete().where((t, fns) => fns.in(t.guestId, guestIds)).build();
+          await tx.execute(ticketPlan);
+          
+          const guestPlan = tx.sql.public.guest.delete().where((g, fns) => fns.in(g.id, guestIds)).build();
+          await tx.execute(guestPlan);
+        }
+      });
       revalidatePath("/guests/import");
       revalidatePath("/");
       revalidatePath("/reports/roster");
       return NextResponse.json({ success: true, message: "Cleared all unassigned legacy guests" });
     } else {
       await db.transaction(async (tx) => {
-        const guestPlan = tx.sql.public.guest.delete().where((f, fns) => fns.eq(f.importBatchId, p.id)).build();
+        const guests = await tx.orm.public.Guest.where((g) => g.importBatchId.eq(p.id)).select("id").all();
+        const guestIds = guests.map((g) => g.id as string);
+        
+        if (guestIds.length > 0) {
+          const ticketPlan = tx.sql.public.ticket.delete().where((t, fns) => fns.in(t.guestId, guestIds)).build();
+          await tx.execute(ticketPlan);
+        }
+        
+        const guestPlan = tx.sql.public.guest.delete().where((g, fns) => fns.eq(g.importBatchId, p.id)).build();
         await tx.execute(guestPlan);
-        const batchPlan = tx.sql.public.importBatch.delete().where((f, fns) => fns.eq(f.id, p.id)).build();
+        
+        const batchPlan = tx.sql.public.importBatch.delete().where((b, fns) => fns.eq(b.id, p.id)).build();
         await tx.execute(batchPlan);
       });
       revalidatePath("/guests/import");
@@ -101,7 +121,7 @@ export async function DELETE(
       return NextResponse.json({ success: true, message: "Batch and all guest rows deleted successfully" });
     }
   } catch (error) {
-    console.error("Failed to delete batch:", error);
+    console.error("Batch deletion error:", error);
     return NextResponse.json(
       { success: false, error: "Internal Server Error" },
       { status: 500 }
